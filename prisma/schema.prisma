@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  purchases Purchase[]  // This relation matches
+  sales     Sale[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  sku         String   @unique
+  price       Float
+  cost        Float
+  quantity    Int      @default(0)
+  lowStockThreshold Int @default(5)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  purchaseItems PurchaseItem[]
+  saleItems     SaleItem[]
+  
+  @@index([sku])
+  @@index([name])
+}
+
+model Purchase {
+  id         String   @id @default(cuid())
+  invoiceNo  String   @unique
+  supplier   String?
+  total      Float
+  createdAt  DateTime @default(now())
+  userId     String   // This field is required
+  user       User     @relation(fields: [userId], references: [id])  // This relation is required
+  
+  items      PurchaseItem[]
+  
+  @@index([invoiceNo])
+}
+
+model PurchaseItem {
+  id         String   @id @default(cuid())
+  quantity   Int
+  price      Float    // This stores the cost price at purchase time
+  total      Float
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  
+  @@unique([purchaseId, productId])
+}
+
+model Sale {
+  id         String   @id @default(cuid())
+  receiptNo  String   @unique
+  customer   String?
+  subtotal   Float
+  tax        Float    @default(0)
+  total      Float
+  paymentMethod String @default("CASH")
+  createdAt  DateTime @default(now())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  
+  items      SaleItem[]
+}
+
+model SaleItem {
+  id         String   @id @default(cuid())
+  quantity   Int
+  price      Float
+  total      Float
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  
+  @@unique([saleId, productId])
+}
