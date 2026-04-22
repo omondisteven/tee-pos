@@ -1,3 +1,5 @@
+// app\api\purchases\[id]\route.ts
+// This file defines API route handlers for managing purchases in a Next.js application.
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthenticatedUser } from '@/lib/auth'
@@ -12,7 +14,6 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Await the params promise to get the id
     const { id } = await params
 
     if (!id) {
@@ -66,7 +67,6 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Await the params promise to get the id
     const { id } = await params
 
     if (!id) {
@@ -76,7 +76,6 @@ export async function DELETE(
       )
     }
 
-    // Get purchase to reverse stock
     const purchase = await prisma.purchase.findUnique({
       where: { id: id },
       include: { items: true }
@@ -89,7 +88,6 @@ export async function DELETE(
       )
     }
 
-    // Reverse stock and delete
     try {
       // Reverse stock quantities
       for (const item of purchase.items) {
@@ -135,7 +133,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Await the params promise to get the id
     const { id } = await params
 
     if (!id) {
@@ -146,14 +143,7 @@ export async function PUT(
     }
 
     const body = await req.json()
-    const { invoiceNo, supplier, items, total } = body
-
-    if (!items || items.length === 0) {
-      return NextResponse.json(
-        { error: 'No items in purchase' },
-        { status: 400 }
-      )
-    }
+    const { action, cancelReason } = body
 
     // Get existing purchase
     const existingPurchase = await prisma.purchase.findUnique({
@@ -168,70 +158,69 @@ export async function PUT(
       )
     }
 
-    // Update in transaction
-    try {
-      // Reverse old stock quantities
-      for (const oldItem of existingPurchase.items) {
-        await prisma.product.update({
-          where: { id: oldItem.productId },
-          data: {
-            quantity: {
-              decrement: oldItem.quantity
-            }
-          }
-        })
+    // Handle cancellation action
+    if (action === 'CANCEL') {
+      if (!cancelReason || cancelReason.trim() === '') {
+        return NextResponse.json(
+          { error: 'Cancellation reason is required' },
+          { status: 400 }
+        )
       }
 
-      // Delete old items
-      await prisma.purchaseItem.deleteMany({
-        where: { purchaseId: id }
-      })
+      if (existingPurchase.status === 'CANCELLED') {
+        return NextResponse.json(
+          { error: 'Purchase is already cancelled' },
+          { status: 400 }
+        )
+      }
 
-      // Update purchase
-      const updatedPurchase = await prisma.purchase.update({
-        where: { id: id },
-        data: {
-          invoiceNo,
-          supplier,
-          total,
-          items: {
-            create: items.map((item: any) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.cost,
-              total: item.cost * item.quantity
-            }))
-          }
-        },
-        include: {
-          items: {
-            include: {
-              product: true
+      try {
+        // Reverse stock quantities
+        for (const item of existingPurchase.items) {
+          await prisma.product.update({
+            where: { id: item.productId },
+            data: {
+              quantity: {
+                decrement: item.quantity
+              }
             }
-          }
+          })
         }
-      })
 
-      // Apply new stock quantities
-      for (const item of items) {
-        await prisma.product.update({
-          where: { id: item.productId },
+        // Update purchase status
+        const updatedPurchase = await prisma.purchase.update({
+          where: { id: id },
           data: {
-            quantity: {
-              increment: item.quantity
+            status: 'CANCELLED',
+            cancelReason: cancelReason,
+            cancelledAt: new Date()
+          },
+          include: {
+            items: {
+              include: {
+                product: true
+              }
+            },
+            user: {
+              select: {
+                name: true,
+                email: true
+              }
             }
           }
         })
-      }
 
-      return NextResponse.json(updatedPurchase)
-    } catch (error) {
-      console.error('Error in update operation:', error)
-      return NextResponse.json(
-        { error: 'Failed to update purchase' },
-        { status: 500 }
-      )
+        return NextResponse.json(updatedPurchase)
+      } catch (error) {
+        console.error('Error in cancellation operation:', error)
+        return NextResponse.json(
+          { error: 'Failed to cancel purchase' },
+          { status: 500 }
+        )
+      }
     }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   } catch (error) {
     console.error('Update purchase error:', error)
     return NextResponse.json(

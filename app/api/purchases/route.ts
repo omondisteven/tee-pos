@@ -12,9 +12,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { invoiceNo, supplier, items, total } = body
 
-    console.log('Received purchase data:', { invoiceNo, supplier, items, total })
-    console.log('Authenticated user:', authUser)
-
     if (!items || items.length === 0) {
       return NextResponse.json(
         { error: 'No items in purchase' },
@@ -41,23 +38,33 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Create purchase using sequential operations (more reliable)
+    // Verify user exists
+    const userExists = await prisma.user.findUnique({
+      where: { id: authUser.userId }
+    })
+
+    if (!userExists) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 400 }
+      )
+    }
+
     try {
-      // 1. Create the purchase record with userId
+      // Create purchase
       const purchase = await prisma.purchase.create({
         data: {
           invoiceNo,
           supplier: supplier || null,
           total,
-          userId: authUser.userId  // Make sure this is included!
+          status: 'ACTIVE',
+          userId: authUser.userId
         }
       })
 
-      console.log('Purchase created:', purchase.id)
-
-      // 2. Create all purchase items
+      // Create purchase items
       for (const item of items) {
-        const purchaseItem = await prisma.purchaseItem.create({
+        await prisma.purchaseItem.create({
           data: {
             purchaseId: purchase.id,
             productId: item.productId,
@@ -66,10 +73,9 @@ export async function POST(req: NextRequest) {
             total: item.cost * item.quantity
           }
         })
-        console.log('Purchase item created:', purchaseItem.id)
       }
 
-      // 3. Update stock quantities for each product
+      // Update stock quantities
       for (const item of items) {
         await prisma.product.update({
           where: { id: item.productId },
@@ -79,10 +85,8 @@ export async function POST(req: NextRequest) {
             }
           }
         })
-        console.log('Stock updated for product:', item.productId)
       }
 
-      // 4. Fetch the complete purchase with items and product details
       const completePurchase = await prisma.purchase.findUnique({
         where: { id: purchase.id },
         include: {
@@ -105,14 +109,14 @@ export async function POST(req: NextRequest) {
     } catch (error) {
       console.error('Error in purchase creation:', error)
       return NextResponse.json(
-        { error: 'Failed to create purchase: ' + (error as Error).message },
+        { error: 'Failed to create purchase' },
         { status: 500 }
       )
     }
   } catch (error) {
     console.error('Create purchase error:', error)
     return NextResponse.json(
-      { error: 'Internal server error: ' + (error as Error).message },
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
@@ -128,9 +132,31 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
+    const search = searchParams.get('search') || ''
+    const status = searchParams.get('status') || ''
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+
+    const where: any = {}
+
+    if (search) {
+      where.invoiceNo = { contains: search, mode: 'insensitive' }
+    }
+
+    if (status && status !== 'ALL') {
+      where.status = status
+    }
+
+    if (startDate && endDate) {
+      where.createdAt = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      }
+    }
 
     const [purchases, total] = await Promise.all([
       prisma.purchase.findMany({
+        where,
         include: {
           items: {
             include: {
@@ -148,11 +174,14 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' }
       }),
-      prisma.purchase.count()
+      prisma.purchase.count({ where })
     ])
+
+    const totalAmount = purchases.reduce((sum, purchase) => sum + purchase.total, 0)
 
     return NextResponse.json({
       purchases,
+      totalAmount,
       pagination: {
         page,
         limit,

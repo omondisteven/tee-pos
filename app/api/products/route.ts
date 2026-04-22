@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (lowStock) {
-      where.quantity = { lte: where.lowStockThreshold }
+      where.quantity = { lte: prisma.product.fields.lowStockThreshold }
     }
 
     const [products, total] = await Promise.all([
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, sku, price, cost, quantity, lowStockThreshold, description } = body
+    const { name, sku, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
 
     if (!name || !sku || !price || !cost) {
       return NextResponse.json(
@@ -92,6 +92,7 @@ export async function POST(req: NextRequest) {
         cost: parseFloat(cost),
         quantity: parseInt(quantity) || 0,
         lowStockThreshold: parseInt(lowStockThreshold) || 5,
+        vatCategory: vatCategory || 'VATABLE',
         description
       }
     })

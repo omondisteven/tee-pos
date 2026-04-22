@@ -37,13 +37,13 @@ async function main() {
     // Create sample products
     console.log('Creating sample products...')
     const products = [
-      { name: 'Laptop', sku: 'LAP001', price: 999.99, cost: 700.00, quantity: 10, lowStockThreshold: 3 },
-      { name: 'Mouse', sku: 'MOU001', price: 29.99, cost: 15.00, quantity: 50, lowStockThreshold: 10 },
-      { name: 'Keyboard', sku: 'KEY001', price: 79.99, cost: 40.00, quantity: 25, lowStockThreshold: 5 },
-      { name: 'Monitor', sku: 'MON001', price: 299.99, cost: 200.00, quantity: 8, lowStockThreshold: 2 },
-      { name: 'USB Cable', sku: 'USB001', price: 9.99, cost: 3.00, quantity: 100, lowStockThreshold: 20 },
-      { name: 'Headphones', sku: 'HEAD001', price: 149.99, cost: 80.00, quantity: 15, lowStockThreshold: 5 },
-    ]
+  { name: 'Laptop', sku: 'LAP001', price: 999.99, cost: 700.00, quantity: 10, lowStockThreshold: 3, vatCategory: 'VATABLE' },
+  { name: 'Mouse', sku: 'MOU001', price: 29.99, cost: 15.00, quantity: 50, lowStockThreshold: 10, vatCategory: 'VATABLE' },
+  { name: 'Keyboard', sku: 'KEY001', price: 79.99, cost: 40.00, quantity: 25, lowStockThreshold: 5, vatCategory: 'VATABLE' },
+  { name: 'Monitor', sku: 'MON001', price: 299.99, cost: 200.00, quantity: 8, lowStockThreshold: 2, vatCategory: 'VATABLE' },
+  { name: 'USB Cable', sku: 'USB001', price: 9.99, cost: 3.00, quantity: 100, lowStockThreshold: 20, vatCategory: 'NON_VATABLE' },
+  { name: 'Headphones', sku: 'HEAD001', price: 149.99, cost: 80.00, quantity: 15, lowStockThreshold: 5, vatCategory: 'VATABLE' },
+]
 
     const createdProducts = []
     for (const product of products) {

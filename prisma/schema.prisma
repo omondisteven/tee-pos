@@ -1,3 +1,4 @@
+//prisma\schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,7 +17,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  purchases Purchase[]  // This relation matches
+  purchases Purchase[]
   sales     Sale[]
 }
 
@@ -29,6 +30,7 @@ model Product {
   cost        Float
   quantity    Int      @default(0)
   lowStockThreshold Int @default(5)
+  vatCategory  String   @default("VATABLE")  // VATABLE or NON_VATABLE
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -40,23 +42,28 @@ model Product {
 }
 
 model Purchase {
-  id         String   @id @default(cuid())
-  invoiceNo  String   @unique
-  supplier   String?
-  total      Float
-  createdAt  DateTime @default(now())
-  userId     String   // This field is required
-  user       User     @relation(fields: [userId], references: [id])  // This relation is required
+  id           String   @id @default(cuid())
+  invoiceNo    String   @unique
+  supplier     String?
+  total        Float
+  status       String   @default("ACTIVE")  // ACTIVE, CANCELLED
+  cancelReason String?
+  cancelledAt  DateTime?
+  createdAt    DateTime @default(now())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
   
-  items      PurchaseItem[]
+  items        PurchaseItem[]
   
   @@index([invoiceNo])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model PurchaseItem {
   id         String   @id @default(cuid())
   quantity   Int
-  price      Float    // This stores the cost price at purchase time
+  price      Float
   total      Float
   productId  String
   product    Product  @relation(fields: [productId], references: [id])
@@ -64,21 +71,29 @@ model PurchaseItem {
   purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   
   @@unique([purchaseId, productId])
+  @@index([purchaseId])
 }
 
 model Sale {
-  id         String   @id @default(cuid())
-  receiptNo  String   @unique
-  customer   String?
-  subtotal   Float
-  tax        Float    @default(0)
-  total      Float
-  paymentMethod String @default("CASH")
-  createdAt  DateTime @default(now())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  id           String   @id @default(cuid())
+  receiptNo    String   @unique
+  customer     String?
+  subtotal     Float
+  tax          Float    @default(0)
+  total        Float
+  paymentMethod String   @default("CASH")
+  status       String   @default("ACTIVE")  // ACTIVE, CANCELLED
+  cancelReason String?
+  cancelledAt  DateTime?
+  createdAt    DateTime @default(now())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
   
-  items      SaleItem[]
+  items        SaleItem[]
+  
+  @@index([receiptNo])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model SaleItem {
