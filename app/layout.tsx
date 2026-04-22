@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
+import { SettingsProvider } from '@/context/SettingsContext'
+import { CurrencyProvider } from '@/context/CurrencyContext'
 
 export const metadata: Metadata = {
   title: 'Stock Management System',
@@ -15,8 +17,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Toaster position="top-right" />
-        {children}
+        <SettingsProvider>
+          <CurrencyProvider>
+            <Toaster position="top-right" />
+            {children}
+          </CurrencyProvider>
+        </SettingsProvider>
       </body>
     </html>
   )

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import { useCurrency } from '@/context/CurrencyContext'
 
 interface Product {
   id: string
@@ -16,6 +17,7 @@ interface Product {
 }
 
 export default function ProductsPage() {
+  const { formatCurrency, refreshSettings } = useCurrency()
   const [products, setProducts] = useState<Product[]>([])
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -35,6 +37,7 @@ export default function ProductsPage() {
 
   useEffect(() => {
     fetchProducts()
+    refreshSettings()
   }, [])
 
   useEffect(() => {
@@ -97,7 +100,7 @@ export default function ProductsPage() {
           price: parseFloat(formData.price),
           cost: parseFloat(formData.cost),
           lowStockThreshold: parseInt(formData.lowStockThreshold),
-          quantity: 0,
+          quantity: editingProduct ? undefined : 0, // Don't send quantity for edit
           vatCategory: formData.vatCategory
         })
       })
@@ -145,7 +148,7 @@ export default function ProductsPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Products</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Products</h1>
         <button
           onClick={() => {
             setEditingProduct(null)
@@ -159,20 +162,20 @@ export default function ProductsPage() {
       </div>
 
       {/* Search and Filter Section */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search Products</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Products</label>
             <input
               type="text"
               placeholder="Search by name or SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Filter</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filter</label>
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -180,45 +183,47 @@ export default function ProductsPage() {
                 onChange={(e) => setFilterLowStock(e.target.checked)}
                 className="mr-2"
               />
-              <span className="text-sm text-gray-700">Show Low Stock Items Only</span>
+              <span className="text-sm text-gray-700 dark:text-gray-300">Show Low Stock Items Only</span>
             </label>
           </div>
         </div>
       </div>
 
       {/* Products Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">VAT</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Price</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cost</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">VAT</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredProducts.map((product) => (
                 <tr 
                   key={product.id} 
-                  className={isLowStock(product) ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}
+                  className={isLowStock(product) ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{product.sku}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">${product.price.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">${product.cost.toFixed(2)}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isLowStock(product) ? 'text-red-600' : 'text-gray-900'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{product.sku}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{formatCurrency(product.price)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{formatCurrency(product.cost)}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isLowStock(product) ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
                     {product.quantity}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      product.vatCategory === 'VATABLE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                      product.vatCategory === 'VATABLE' 
+                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                     }`}>
                       {product.vatCategory === 'VATABLE' ? 'Vatable' : 'Non-Vatable'}
                     </span>
@@ -238,13 +243,13 @@ export default function ProductsPage() {
                         })
                         setShowModal(true)
                       }}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                     >
                       Delete
                     </button>
@@ -256,11 +261,11 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal - Keep existing modal code but add dark mode classes */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-medium mb-4">{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <h3 className="text-lg font-medium mb-4 dark:text-white">{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
             <form onSubmit={handleSubmit}>
               <div className="space-y-3">
                 <input
@@ -268,7 +273,7 @@ export default function ProductsPage() {
                   placeholder="Name *"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   required
                 />
                 <input
@@ -276,7 +281,7 @@ export default function ProductsPage() {
                   placeholder="SKU *"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   required
                 />
                 <input
@@ -285,7 +290,7 @@ export default function ProductsPage() {
                   placeholder="Price *"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   required
                 />
                 <input
@@ -294,7 +299,7 @@ export default function ProductsPage() {
                   placeholder="Cost *"
                   value={formData.cost}
                   onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   required
                 />
                 <input
@@ -302,33 +307,35 @@ export default function ProductsPage() {
                   placeholder="Low Stock Threshold"
                   value={formData.lowStockThreshold}
                   onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                 />
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">VAT Category</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Category</label>
                   <select
                     value={formData.vatCategory}
                     onChange={(e) => setFormData({ ...formData, vatCategory: e.target.value })}
-                    className="w-full px-3 py-2 border rounded"
+                    className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   >
-                    <option value="VATABLE">Vatable (10% VAT)</option>
-                    <option value="NON_VATABLE">Non-Vatable (0% VAT)</option>
+                    <option value="VATABLE">Vatable</option>
+                    <option value="NON_VATABLE">Non-Vatable</option>
                   </select>
                 </div>
                 <textarea
                   placeholder="Description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   rows={3}
                 />
-                <p className="text-xs text-gray-500">Note: Quantity will be updated through purchases</p>
+                {!editingProduct && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Note: Quantity will be updated through purchases</p>
+                )}
               </div>
               <div className="flex justify-end space-x-2 mt-4">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                  className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
                 >
                   Cancel
                 </button>

@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Sales', href: '/sales', icon: '💰' },
   { name: 'Purchases', href: '/purchases', icon: '📥' },
   { name: 'Reports', href: '/reports', icon: '📈' },
+  { name: 'Settings', href: '/settings', icon: '⚙️' },
 ]
 
 export default function Sidebar() {

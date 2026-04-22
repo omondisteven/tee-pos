@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { useCurrency } from '@/context/CurrencyContext'
 import PurchaseModal from '@/components/Purchases/PurchaseModal'
 import PurchaseDetailsModal from '@/components/Purchases/PurchaseDetailsModal'
 
@@ -24,6 +25,7 @@ interface Purchase {
 }
 
 export default function PurchasesPage() {
+  const { formatCurrency } = useCurrency()
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,19 +66,16 @@ export default function PurchasesPage() {
   const filterPurchases = () => {
     let filtered = [...purchases]
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(purchase =>
         purchase.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    // Status filter
     if (statusFilter !== 'ALL') {
       filtered = filtered.filter(purchase => purchase.status === statusFilter)
     }
 
-    // Date range filter
     if (startDate && endDate) {
       filtered = filtered.filter(purchase => {
         const purchaseDate = new Date(purchase.createdAt)
@@ -145,7 +144,7 @@ export default function PurchasesPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Purchases</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Purchases</h1>
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -155,24 +154,24 @@ export default function PurchasesPage() {
       </div>
 
       {/* Search and Filter Section */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search by Invoice #</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search by Invoice #</label>
             <input
               type="text"
               placeholder="Invoice number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="ALL">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -180,33 +179,33 @@ export default function PurchasesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
             <input
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
       </div>
 
       {/* Summary and Print */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-sm text-gray-600">Total Purchases (Filtered)</p>
-            <p className="text-2xl font-bold text-blue-600">${totalAmount.toFixed(2)}</p>
-            <p className="text-xs text-gray-500">{filteredPurchases.length} transactions</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Purchases (Filtered)</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalAmount)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{filteredPurchases.length} transactions</p>
           </div>
           <button
             onClick={handlePrint}
@@ -244,7 +243,7 @@ export default function PurchasesPage() {
                 <tr key={purchase.id}>
                   <td className="px-4 py-2">{purchase.invoiceNo}</td>
                   <td className="px-4 py-2">{purchase.supplier || 'N/A'}</td>
-                  <td className="px-4 py-2 text-right">${purchase.total.toFixed(2)}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(purchase.total)}</td>
                   <td className="px-4 py-2">{new Date(purchase.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-2">{purchase.status}</td>
                 </tr>
@@ -252,49 +251,49 @@ export default function PurchasesPage() {
             </tbody>
           </table>
           <div className="text-right font-bold text-lg">
-            Total: ${totalAmount.toFixed(2)}
+            Total: {formatCurrency(totalAmount)}
           </div>
         </div>
       </div>
 
       {/* Purchases Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Purchased By</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Items</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supplier</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Purchased By</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Items</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredPurchases.map((purchase) => (
-                <tr key={purchase.id} className={purchase.status === 'CANCELLED' ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{purchase.invoiceNo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{purchase.supplier || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold">${purchase.total.toFixed(2)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{new Date(purchase.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{purchase.user?.name || 'Unknown'}</td>
+                <tr key={purchase.id} className={purchase.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.invoiceNo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.supplier || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(purchase.total)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{new Date(purchase.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.user?.name || 'Unknown'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      purchase.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      purchase.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
                     }`}>
                       {purchase.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600 dark:text-gray-400">
                     {purchase.items?.length || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                     <button
                       onClick={() => setSelectedPurchase(purchase)}
-                      className="text-blue-600 hover:text-blue-900 mr-3"
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
                     >
                       View
                     </button>
@@ -304,7 +303,7 @@ export default function PurchasesPage() {
                           setCancellingPurchaseId(purchase.id)
                           setShowCancelModal(true)
                         }}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                       >
                         Cancel
                       </button>
@@ -333,14 +332,14 @@ export default function PurchasesPage() {
       {/* Cancel Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <h3 className="text-lg font-medium mb-4">Cancel Purchase</h3>
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <h3 className="text-lg font-medium mb-4 dark:text-white">Cancel Purchase</h3>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Cancellation *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reason for Cancellation *</label>
               <textarea
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-red-500"
                 rows={3}
                 placeholder="Please provide a reason for cancelling this purchase..."
                 required
@@ -353,7 +352,7 @@ export default function PurchasesPage() {
                   setCancelReason('')
                   setCancellingPurchaseId(null)
                 }}
-                className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
               >
                 Cancel
               </button>

@@ -16,15 +16,32 @@ export async function PUT(
     const body = await req.json()
     const { name, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
 
+    // Get current product to preserve quantity if not provided
+    const currentProduct = await prisma.product.findUnique({
+      where: { id }
+    })
+
+    if (!currentProduct) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      )
+    }
+
+    // Use existing quantity if new quantity is not provided or is 0
+    const newQuantity = quantity !== undefined && quantity !== null && quantity !== 0 
+      ? parseInt(quantity) 
+      : currentProduct.quantity
+
     const product = await prisma.product.update({
       where: { id },
       data: {
         name,
         price: parseFloat(price),
         cost: parseFloat(cost),
-        quantity: parseInt(quantity),
+        quantity: newQuantity,
         lowStockThreshold: parseInt(lowStockThreshold),
-        vatCategory: vatCategory || 'VATABLE',
+        vatCategory: vatCategory || currentProduct.vatCategory,
         description
       }
     })
