@@ -3,12 +3,11 @@
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
-import CompactTable from '@/components/UI/CompactTable'
 
 interface Sale {
   id: string
   receiptNo: string
-  customer: string | null | { id: string; name: string; phone: string | null }
+  customer: string | null
   customerName: string | null
   customerId: string | null
   subtotal: number
@@ -24,14 +23,31 @@ interface Sale {
     quantity: number
     price: number
     total: number
-    product: { name: string; sku: string; vatCategory: string }
+    product: { 
+      id: string
+      name: string
+      sku: string
+      vatCategory: string
+    }
   }>
+}
+
+interface SalesItem {
+  productId: string
+  productName: string
+  productSku: string
+  totalQuantity: number
+  totalRevenue: number
+  vatCategory: string
+  saleCount: number
 }
 
 export default function SalesPage() {
   const { formatCurrency, vatPercentage } = useCurrency()
   const [sales, setSales] = useState<Sale[]>([])
   const [filteredSales, setFilteredSales] = useState<Sale[]>([])
+  const [salesItems, setSalesItems] = useState<SalesItem[]>([])
+  const [filteredItems, setFilteredItems] = useState<SalesItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -41,6 +57,7 @@ export default function SalesPage() {
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [cancellingSaleId, setCancellingSaleId] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'receipts' | 'items'>('receipts')
   const printRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,8 +65,12 @@ export default function SalesPage() {
   }, [])
 
   useEffect(() => {
-    filterSales()
-  }, [searchTerm, statusFilter, startDate, endDate, sales])
+    if (viewMode === 'receipts') {
+      filterSales()
+    } else {
+      filterItems()
+    }
+  }, [searchTerm, statusFilter, startDate, endDate, sales, viewMode])
 
   const fetchSales = async () => {
     try {
@@ -59,6 +80,31 @@ export default function SalesPage() {
       })
       const data = await res.json()
       setSales(data.sales || [])
+      
+      // Process items data
+      const itemsMap = new Map<string, SalesItem>()
+      for (const sale of (data.sales || [])) {
+        for (const item of sale.items) {
+          const key = item.product.id
+          if (itemsMap.has(key)) {
+            const existing = itemsMap.get(key)!
+            existing.totalQuantity += item.quantity
+            existing.totalRevenue += item.total
+            existing.saleCount += 1
+          } else {
+            itemsMap.set(key, {
+              productId: item.product.id,
+              productName: item.product.name,
+              productSku: item.product.sku,
+              totalQuantity: item.quantity,
+              totalRevenue: item.total,
+              vatCategory: item.product.vatCategory,
+              saleCount: 1
+            })
+          }
+        }
+      }
+      setSalesItems(Array.from(itemsMap.values()))
     } catch (error) {
       toast.error('Failed to fetch sales')
     } finally {
@@ -92,14 +138,83 @@ export default function SalesPage() {
     setFilteredSales(filtered)
   }
 
+  const filterItems = () => {
+    let filtered = [...salesItems]
+
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.productSku.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // For items, we don't filter by status (status is for receipts)
+    // Date filtering for items - need to filter based on sales within date range
+    if (startDate && endDate) {
+      // Recalculate items based on date-filtered sales
+      const dateFilteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.createdAt)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59)
+        return saleDate >= start && saleDate <= end
+      })
+      
+      const itemsMap = new Map<string, SalesItem>()
+      for (const sale of dateFilteredSales) {
+        for (const item of sale.items) {
+          const key = item.product.id
+          if (itemsMap.has(key)) {
+            const existing = itemsMap.get(key)!
+            existing.totalQuantity += item.quantity
+            existing.totalRevenue += item.total
+            existing.saleCount += 1
+          } else {
+            itemsMap.set(key, {
+              productId: item.product.id,
+              productName: item.product.name,
+              productSku: item.product.sku,
+              totalQuantity: item.quantity,
+              totalRevenue: item.total,
+              vatCategory: item.product.vatCategory,
+              saleCount: 1
+            })
+          }
+        }
+      }
+      filtered = Array.from(itemsMap.values())
+    }
+
+    // Apply search filter again after date filtering
+    if (searchTerm) {
+      filtered = filtered.filter(item =>
+        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.productSku.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    setFilteredItems(filtered)
+  }
+
+  // Fix the getCustomerName function
   const getCustomerName = (sale: Sale): string => {
+    // Check customerName first (denormalized field)
     if (sale.customerName) return sale.customerName
+    
+    // Check if customer is a string
     if (typeof sale.customer === 'string') return sale.customer
-    if (sale.customer && typeof sale.customer === 'object') return sale.customer.name
+    
+    // Check if customer is an object with name property
+    if (sale.customer && typeof sale.customer === 'object' && 'name' in sale.customer) {
+      return (sale.customer as { name: string }).name
+    }
+    
     return 'Walk-in Customer'
   }
 
-  const totalAmount = filteredSales.reduce((sum, sale) => sum + sale.total, 0)
+  const totalAmount = viewMode === 'receipts' 
+    ? filteredSales.reduce((sum, sale) => sum + sale.total, 0)
+    : filteredItems.reduce((sum, item) => sum + item.totalRevenue, 0)
 
   const handlePrint = () => {
     const printContent = printRef.current
@@ -151,70 +266,72 @@ export default function SalesPage() {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
 
-  const saleColumns = [
-    { key: 'receiptNo', header: 'Receipt #', align: 'left' as const },
-    { key: 'customer', header: 'Customer', align: 'left' as const, render: (value: any, row: any) => getCustomerName(row) },
-    { key: 'total', header: 'Total', align: 'right' as const, render: (value: number) => formatCurrency(value) },
-    { key: 'createdAt', header: 'Date', align: 'left' as const, render: (value: string) => new Date(value).toLocaleDateString() },
-    { key: 'user', header: 'Sold By', align: 'left' as const, render: (value: any) => value?.name || 'Unknown' },
-    { key: 'status', header: 'Status', align: 'center' as const, render: (value: string) => (
-      <span className={`px-1.5 py-0.5 text-xs rounded-full ${
-        value === 'ACTIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-      }`}>
-        {value}
-      </span>
-    )},
-    { key: 'actions', header: 'Actions', align: 'center' as const, render: (_: any, row: any) => (
-      <select
-        onChange={(e) => {
-          const action = e.target.value
-          if (action === 'view') {
-            setSelectedSale(row)
-          } else if (action === 'cancel' && row.status === 'ACTIVE') {
-            setCancellingSaleId(row.id)
-            setShowCancelModal(true)
-          }
-          e.target.value = ''
-        }}
-        className="text-xs border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-1.5 py-0.5"
-        defaultValue=""
-      >
-        <option value="" disabled>Actions</option>
-        <option value="view">View Details</option>
-        {row.status === 'ACTIVE' && <option value="cancel">Cancel Sale</option>}
-      </select>
-    )}
-  ]
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Sales History</h1>
+
+      {/* View Mode Toggle */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('receipts')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'receipts'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              By Receipts
+            </button>
+            <button
+              onClick={() => setViewMode('items')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'items'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              By Items
+            </button>
+          </div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            {viewMode === 'receipts' 
+              ? 'Viewing sales by receipt. Click on a receipt to see details.' 
+              : 'Viewing sales by product. Shows total quantity sold and revenue per item.'}
+          </div>
+        </div>
+      </div>
 
       {/* Search and Filter Section */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search by Receipt #</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {viewMode === 'receipts' ? 'Search by Receipt #' : 'Search by Product'}
+            </label>
             <input
               type="text"
-              placeholder="Receipt number..."
+              placeholder={viewMode === 'receipts' ? "Receipt number..." : "Product name or SKU..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="ALL">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
-          </div>
+          {viewMode === 'receipts' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ALL">All Status</option>
+                <option value="ACTIVE">Active</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
             <input
@@ -240,9 +357,15 @@ export default function SalesPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Total Sales (Filtered)</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {viewMode === 'receipts' ? 'Total Sales (Filtered)' : 'Total Revenue (Filtered)'}
+            </p>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalAmount)}</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{filteredSales.length} transactions</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {viewMode === 'receipts' 
+                ? `${filteredSales.length} transactions`
+                : `${filteredItems.length} products sold`}
+            </p>
           </div>
           <button
             onClick={handlePrint}
@@ -256,7 +379,9 @@ export default function SalesPage() {
       {/* Printable Report */}
       <div ref={printRef} className="hidden">
         <div className="p-8">
-          <h1 className="text-2xl font-bold text-center mb-4">Sales Report</h1>
+          <h1 className="text-2xl font-bold text-center mb-4">
+            {viewMode === 'receipts' ? 'Sales Report' : 'Product Sales Report'}
+          </h1>
           <p className="text-center text-gray-600 mb-6">
             Generated on {new Date().toLocaleString()}
           </p>
@@ -265,38 +390,194 @@ export default function SalesPage() {
               Period: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
             </p>
           )}
-          <table className="min-w-full divide-y divide-gray-200 mb-4">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left">Receipt #</th>
-                <th className="px-4 py-2 text-left">Customer</th>
-                <th className="px-4 py-2 text-right">Total</th>
-                <th className="px-4 py-2 text-left">Date</th>
-                <th className="px-4 py-2 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSales.map((sale) => (
-                <tr key={sale.id}>
-                  <td className="px-4 py-2">{sale.receiptNo}</td>
-                  <td className="px-4 py-2">{getCustomerName(sale)}</td>
-                  <td className="px-4 py-2 text-right">{formatCurrency(sale.total)}</td>
-                  <td className="px-4 py-2">{new Date(sale.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-2">{sale.status}</td>
+          
+          {viewMode === 'receipts' ? (
+            <table className="min-w-full divide-y divide-gray-200 mb-4">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Receipt #</th>
+                  <th className="px-4 py-2 text-left">Customer</th>
+                  <th className="px-4 py-2 text-right">Total</th>
+                  <th className="px-4 py-2 text-left">Date</th>
+                  <th className="px-4 py-2 text-left">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredSales.map((sale) => (
+                  <tr key={sale.id}>
+                    <td className="px-4 py-2">{sale.receiptNo}</td>
+                    <td className="px-4 py-2">{getCustomerName(sale)}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(sale.total)}</td>
+                    <td className="px-4 py-2">{new Date(sale.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-2">{sale.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200 mb-4">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left">Product Name</th>
+                  <th className="px-4 py-2 text-left">SKU</th>
+                  <th className="px-4 py-2 text-right">Quantity Sold</th>
+                  <th className="px-4 py-2 text-right">Total Revenue</th>
+                  <th className="px-4 py-2 text-center">VAT</th>
+                  <th className="px-4 py-2 text-right">Times Sold</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredItems.map((item) => (
+                  <tr key={item.productId}>
+                    <td className="px-4 py-2">{item.productName}</td>
+                    <td className="px-4 py-2">{item.productSku}</td>
+                    <td className="px-4 py-2 text-right">{item.totalQuantity}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(item.totalRevenue)}</td>
+                    <td className="px-4 py-2 text-center">
+                      {item.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}
+                    </td>
+                    <td className="px-4 py-2 text-right">{item.saleCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          
           <div className="text-right font-bold text-lg">
-            Total: {formatCurrency(totalAmount)}
+            {viewMode === 'receipts' ? 'Total: ' : 'Total Revenue: '}
+            {formatCurrency(totalAmount)}
           </div>
         </div>
       </div>
 
-      {/* Sales Table */}
-      <CompactTable columns={saleColumns} data={filteredSales} />
+      {/* Data Table - Receipts View */}
+      {viewMode === 'receipts' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Receipt #</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Customer</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Sold By</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredSales.map((sale) => (
+                  <tr key={sale.id} className={sale.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.receiptNo}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {getCustomerName(sale)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
+                      {formatCurrency(sale.total)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {new Date(sale.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                      {sale.user?.name || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        sale.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                      }`}>
+                        {sale.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                      <select
+                        onChange={(e) => {
+                          const action = e.target.value
+                          if (action === 'view') {
+                            setSelectedSale(sale)
+                          } else if (action === 'cancel' && sale.status === 'ACTIVE') {
+                            setCancellingSaleId(sale.id)
+                            setShowCancelModal(true)
+                          }
+                          e.target.value = ''
+                        }}
+                        className="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1"
+                        defaultValue=""
+                      >
+                        <option value="" disabled>Actions</option>
+                        <option value="view">View Details</option>
+                        {sale.status === 'ACTIVE' && (
+                          <option value="cancel">Cancel Sale</option>
+                        )}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      {/* View Details Modal */}
+      {/* Data Table - Items View */}
+      {viewMode === 'items' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Product Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">SKU</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Quantity Sold</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total Revenue</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">VAT</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Times Sold</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No items found for the selected period
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItems.map((item) => (
+                    <tr key={item.productId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {item.productName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {item.productSku}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
+                        {item.totalQuantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-green-600 dark:text-green-400">
+                        {formatCurrency(item.totalRevenue)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          item.vatCategory === 'VATABLE' 
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                        }`}>
+                          {item.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">
+                        {item.saleCount}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* View Details Modal - Only for receipts view */}
       {selectedSale && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
