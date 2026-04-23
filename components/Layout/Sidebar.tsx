@@ -105,7 +105,8 @@ export default function Sidebar() {
   return (
     <aside className="w-64 bg-gray-800 text-white flex flex-col h-screen">
       <div className="p-3 border-b border-gray-700">
-        <h1 className="text-lg font-bold">Stock Manager</h1>
+        <h1 className="text-lg font-bold">TeePOS - Stock Manager</h1>
+        <p>By Teevos Solutions</p>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2">

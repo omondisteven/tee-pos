@@ -5,7 +5,7 @@ import { SettingsProvider } from '@/context/SettingsContext'
 import { CurrencyProvider } from '@/context/CurrencyContext'
 
 export const metadata: Metadata = {
-  title: 'Stock Management System',
+  title: 'Stock Management System - Licensed to Mike Osano',
   description: 'Complete stock and sales management system',
 }
 

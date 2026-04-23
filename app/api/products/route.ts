@@ -2,6 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthenticatedUser } from '@/lib/auth'
 
+// Define the Product type
+interface Product {
+  id: string
+  name: string
+  sku: string
+  price: number
+  cost: number
+  quantity: number
+  lowStockThreshold: number
+  vatCategory: string
+  description: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
 export async function GET(req: NextRequest) {
   try {
     const authUser = await getAuthenticatedUser(req)
@@ -24,22 +39,23 @@ export async function GET(req: NextRequest) {
       ]
     }
 
+    // Fetch products based on search
+    let products = await prisma.product.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    })
+
+    // Apply low stock filter in JavaScript with proper typing
     if (lowStock) {
-      where.quantity = { lte: prisma.product.fields.lowStockThreshold }
+      products = products.filter((product: Product) => product.quantity <= product.lowStockThreshold)
     }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.product.count({ where })
-    ])
+    // Apply pagination
+    const total = products.length
+    const paginatedProducts = products.slice((page - 1) * limit, page * limit)
 
     return NextResponse.json({
-      products,
+      products: paginatedProducts,
       pagination: {
         page,
         limit,
