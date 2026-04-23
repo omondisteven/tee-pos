@@ -373,7 +373,6 @@ export default function GaragePOSPage() {
             </div>
         </div>
         )}
-        // Add WorkOrderPrint component somewhere on the page (hidden until needed)
         {createdWorkOrder && !showPrintDialog && (
         <div className="hidden">
             <WorkOrderPrint 
