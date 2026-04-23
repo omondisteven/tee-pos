@@ -32,6 +32,7 @@ interface Debtor {
   id: string
   receiptNo: string
   customer: string | null
+  customerId?: string | null  // Add this optional field
   subtotal: number
   tax: number
   total: number
@@ -83,6 +84,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Remove the type assertion to avoid TypeScript errors
     const debtors = await prisma.sale.findMany({
       where,
       include: {
@@ -102,11 +104,22 @@ export async function GET(req: NextRequest) {
         }
       },
       orderBy: { createdAt: 'desc' }
-    }) as Debtor[]
+    })
 
-    // Fix: Add proper typing for reduce and map functions
-    const totalOutstanding = debtors.reduce((sum: number, debtor: Debtor) => sum + debtor.balance, 0)
-    const totalCustomers = new Set(debtors.map((d: Debtor) => d.customer)).size
+    // Fix: Calculate totals using proper typing with any for safety
+    let totalOutstanding = 0
+    const customerSet = new Set()
+
+    for (const debtor of debtors) {
+      totalOutstanding += debtor.balance
+      if (debtor.customerId) {
+        customerSet.add(debtor.customerId)
+      } else if (debtor.customer) {
+        customerSet.add(debtor.customer)
+      }
+    }
+
+    const totalCustomers = customerSet.size
 
     return NextResponse.json({
       debtors,
