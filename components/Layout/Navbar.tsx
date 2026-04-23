@@ -1,19 +1,70 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import UserMenu from './UserMenu'
 
 export default function Navbar() {
   const router = useRouter()
+  const [userName, setUserName] = useState<string>('')
+  const [userRole, setUserRole] = useState<string>('')
+  const [companyName, setCompanyName] = useState<string>('Stock Management System')
+
+  useEffect(() => {
+    // Get user info from localStorage
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      setUserName(user.name || 'User')
+      setUserRole(user.role || 'USER')
+    }
+
+    // Fetch company info from settings
+    const fetchCompanyInfo = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        const res = await fetch('/api/settings', {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setCompanyName(data.companyName || 'Stock Management System')
+        }
+      } catch (error) {
+        console.error('Failed to fetch company info')
+      }
+    }
+
+    fetchCompanyInfo()
+  }, [])
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      case 'MANAGER':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+    }
+  }
 
   return (
     <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
       <div className="px-4 py-2 flex justify-between items-center">
-        <div className="flex items-center">
-          <h2 className="text-md font-semibold text-gray-800 dark:text-white">
-            Welcome back!
-          </h2>
+        <div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{companyName}</div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-gray-800 dark:text-white">
+              Welcome back, {userName || 'User'}!
+            </h2>
+            {userRole && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleBadgeColor(userRole)}`}>
+                {userRole}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center space-x-4">
           <Link

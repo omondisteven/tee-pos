@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
+import CompactTable from '@/components/UI/CompactTable'
 
 interface Debtor {
   id: string
@@ -187,6 +188,30 @@ export default function DebtorsReportPage() {
         setPaymentAmount(value)
     }
 
+    const debtorColumns = [
+    { key: 'receiptNo', header: 'Receipt #', align: 'left' as const },
+    { key: 'customer', header: 'Customer', align: 'left' as const, render: (value: any, row: any) => row.customerName || row.customer || 'Walk-in' },
+    { key: 'phone', header: 'Phone', align: 'left' as const, render: (value: any, row: any) => row.customer?.phone || '-' },
+    { key: 'total', header: 'Total', align: 'right' as const, render: (value: number) => formatCurrency(value) },
+    { key: 'amountPaid', header: 'Paid', align: 'right' as const, render: (value: number) => formatCurrency(value) },
+    { key: 'balance', header: 'Balance', align: 'right' as const, render: (value: number) => (
+      <span className="text-red-600 font-semibold">{formatCurrency(value)}</span>
+    )},
+    { key: 'createdAt', header: 'Date', align: 'left' as const, render: (value: string) => new Date(value).toLocaleDateString() },
+    { key: 'actions', header: 'Actions', align: 'center' as const, render: (_: any, row: any) => (
+      <button
+        onClick={() => {
+          setSelectedDebtor(row)
+          setPaymentAmount(row.balance.toString())
+          setShowPaymentModal(true)
+        }}
+        className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs hover:bg-blue-700"
+      >
+        Record Payment
+      </button>
+    )}
+  ]
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -306,75 +331,7 @@ export default function DebtorsReportPage() {
       </div>
 
       {/* Debtors Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Receipt #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Paid</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Balance</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredDebtors.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                    No debtors found
-                  </td>
-                </tr>
-              ) : (
-                filteredDebtors.map((debtor) => {
-                  const customer = customers.find(c => c.id === debtor.customerId)
-                  return (
-                    <tr key={debtor.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                        {debtor.receiptNo}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {debtor.customerName || 'Walk-in Customer'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {customer?.phone || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {new Date(debtor.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">
-                        {formatCurrency(debtor.total)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400">
-                        {formatCurrency(debtor.amountPaid)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-red-600 dark:text-red-400">
-                        {formatCurrency(debtor.balance)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                        <button
-                          onClick={() => {
-                            setSelectedDebtor(debtor)
-                            setPaymentAmount(debtor.balance.toString())
-                            setShowPaymentModal(true)
-                          }}
-                          className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs"
-                        >
-                          Record Payment
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
+      <CompactTable columns={debtorColumns} data={filteredDebtors} />
       {/* Payment Modal */}
       {showPaymentModal && selectedDebtor && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
+import CompactTable from '@/components/UI/CompactTable'
 
 interface Customer {
   id: string
@@ -168,6 +169,45 @@ export default function CustomersPage() {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
 
+  const customerColumns = [
+    { key: 'name', header: 'Name', align: 'left' as const },
+    { key: 'phone', header: 'Phone', align: 'left' as const, render: (value: string) => value || '-' },
+    { key: 'email', header: 'Email', align: 'left' as const, render: (value: string) => value || '-' },
+    { key: 'address', header: 'Address', align: 'left' as const, render: (value: string) => value || '-' },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (value: string) => (
+      <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+        value === 'ACTIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      }`}>
+        {value}
+      </span>
+    )},
+    { key: 'actions', header: 'Actions', align: 'center' as const, render: (_: any, row: any) => (
+      <select
+        onChange={(e) => {
+          const action = e.target.value
+          if (action === 'view') {
+            setSelectedCustomer(row)
+            setShowViewModal(true)
+          } else if (action === 'edit') {
+            setSelectedCustomer(row)
+            setEditFormData({ phone: row.phone || '', email: row.email || '' })
+            setShowEditModal(true)
+          } else if (action === 'status') {
+            handleToggleStatus(row)
+          }
+          e.target.value = ''
+        }}
+        className="text-xs border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-1.5 py-0.5"
+        defaultValue=""
+      >
+        <option value="" disabled>Actions</option>
+        <option value="view">View Details</option>
+        <option value="edit">Edit</option>
+        <option value="status">{row.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</option>
+      </select>
+    )}
+  ]
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -209,81 +249,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Address</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                    {customer.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {customer.phone || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {customer.email || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                    {customer.address || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      customer.status === 'ACTIVE' 
-                        ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                        : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                    }`}>
-                      {customer.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    <div className="relative inline-block text-left">
-                      <select
-                        onChange={(e) => {
-                          const action = e.target.value
-                          if (action === 'view') {
-                            setSelectedCustomer(customer)
-                            setShowViewModal(true)
-                          } else if (action === 'edit') {
-                            setSelectedCustomer(customer)
-                            setEditFormData({
-                              phone: customer.phone || '',
-                              email: customer.email || ''
-                            })
-                            setShowEditModal(true)
-                          } else if (action === 'status') {
-                            handleToggleStatus(customer)
-                          }
-                          e.target.value = ''
-                        }}
-                        className="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1"
-                        defaultValue=""
-                      >
-                        <option value="" disabled>Actions</option>
-                        <option value="view">View Details</option>
-                        <option value="edit">Edit</option>
-                        <option value="status">
-                          {customer.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                        </option>
-                      </select>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactTable columns={customerColumns} data={filteredCustomers} />
 
       {/* Add Customer Modal */}
       {showModal && (

@@ -200,23 +200,38 @@ export default function UsersPage() {
                       {user.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm space-x-2">
-                    <button
-                      onClick={() => handleToggleStatus(user.id, user.status)}
-                      className={`px-2 py-1 rounded text-xs ${
-                        user.status === 'ACTIVE' 
-                          ? 'bg-yellow-600 text-white hover:bg-yellow-700' 
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                    <select
+                      onChange={(e) => {
+                        const action = e.target.value
+                        if (action === 'deactivate') {
+                          handleToggleStatus(user.id, user.status)
+                        } else if (action === 'delete') {
+                          handleDeleteUser(user.id, user.name)
+                        }
+                        e.target.value = ''
+                      }}
+                      className="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1"
+                      defaultValue=""
                     >
-                      {user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user.id, user.name)}
-                      className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700"
+                      <option value="" disabled>Actions</option>
+                      <option value="deactivate">
+                        {user.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                      </option>
+                      <option value="delete">Delete User</option>
+                    </select>
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <select
+                      value={user.role}
+                      onChange={(e) => handleUpdateRole(user.id, e.target.value)}
+                      className="text-sm border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-2 py-1"
                     >
-                      Delete
-                    </button>
+                      <option value="USER">User</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="ADMIN">Admin</option>
+                    </select>
                   </td>
                 </tr>
               ))}

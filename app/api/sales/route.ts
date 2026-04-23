@@ -244,6 +244,13 @@ export async function GET(req: NextRequest) {
             }
           },
           payments: true,
+          customer: {  // Add this to include customer details
+            select: {
+              id: true,
+              name: true,
+              phone: true
+            }
+          },
           user: {
             select: {
               name: true,
@@ -258,9 +265,8 @@ export async function GET(req: NextRequest) {
       prisma.sale.count({ where })
     ])
 
-    // Fix: Add proper typing for reduce functions
-    const totalAmount = (sales as Sale[]).reduce((sum: number, sale: Sale) => sum + sale.total, 0)
-    const totalOutstanding = (sales as Sale[]).reduce((sum: number, sale: Sale) => sum + sale.balance, 0)
+    const totalAmount = (sales as any[]).reduce((sum: number, sale: any) => sum + sale.total, 0)
+    const totalOutstanding = (sales as any[]).reduce((sum: number, sale: any) => sum + sale.balance, 0)
 
     return NextResponse.json({
       sales,

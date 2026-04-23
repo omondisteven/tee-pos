@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
+import CompactTable from '@/components/UI/CompactTable'
 
 interface Product {
   id: string
@@ -145,6 +146,54 @@ export default function ProductsPage() {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
 
+  const productColumns = [
+    { key: 'name', header: 'Name', align: 'left' as const },
+    { key: 'sku', header: 'SKU', align: 'left' as const },
+    { key: 'price', header: 'Price', align: 'right' as const, render: (value: number) => formatCurrency(value) },
+    { key: 'cost', header: 'Cost', align: 'right' as const, render: (value: number) => formatCurrency(value) },
+    { key: 'quantity', header: 'Stock', align: 'right' as const, render: (value: number, row: any) => (
+      <span className={value <= row.lowStockThreshold ? 'text-red-600 font-semibold' : ''}>
+        {value}
+      </span>
+    )},
+    { key: 'vatCategory', header: 'VAT', align: 'center' as const, render: (value: string) => (
+      <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+        value === 'VATABLE' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+      }`}>
+        {value === 'VATABLE' ? 'Vatable' : 'Non-Vatable'}
+      </span>
+    )},
+    { key: 'actions', header: 'Actions', align: 'center' as const, render: (_: any, row: any) => (
+      <select
+        onChange={(e) => {
+          const action = e.target.value
+          if (action === 'edit') {
+            setEditingProduct(row)
+            setFormData({
+              name: row.name,
+              sku: row.sku,
+              price: row.price.toString(),
+              cost: row.cost.toString(),
+              lowStockThreshold: row.lowStockThreshold.toString(),
+              vatCategory: row.vatCategory,
+              description: row.description || ''
+            })
+            setShowModal(true)
+          } else if (action === 'delete') {
+            handleDelete(row.id)
+          }
+          e.target.value = ''
+        }}
+        className="text-xs border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-1.5 py-0.5"
+        defaultValue=""
+      >
+        <option value="" disabled>Actions</option>
+        <option value="edit">Edit</option>
+        <option value="delete">Delete</option>
+      </select>
+    )}
+  ]
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -190,76 +239,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">SKU</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Price</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Cost</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stock</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">VAT</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredProducts.map((product) => (
-                <tr 
-                  key={product.id} 
-                  className={isLowStock(product) ? 'bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{product.sku}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{formatCurrency(product.price)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900 dark:text-white">{formatCurrency(product.cost)}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${isLowStock(product) ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
-                    {product.quantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      product.vatCategory === 'VATABLE' 
-                        ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                    }`}>
-                      {product.vatCategory === 'VATABLE' ? 'Vatable' : 'Non-Vatable'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    <button
-                      onClick={() => {
-                        setEditingProduct(product)
-                        setFormData({
-                          name: product.name,
-                          sku: product.sku,
-                          price: product.price.toString(),
-                          cost: product.cost.toString(),
-                          lowStockThreshold: product.lowStockThreshold.toString(),
-                          vatCategory: product.vatCategory,
-                          description: product.description || ''
-                        })
-                        setShowModal(true)
-                      }}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(product.id)}
-                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactTable columns={productColumns} data={filteredProducts} />
 
       {/* Modal - Keep existing modal code but add dark mode classes */}
       {showModal && (

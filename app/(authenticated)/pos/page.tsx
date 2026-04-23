@@ -75,6 +75,22 @@ export default function POSPage() {
   const [balance, setBalance] = useState(0)
   const { formatCurrency, vatPercentage, refreshSettings, decimalPlaces } = useCurrency()
 
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
+  const customerName = selectedCustomer?.name || ''
+  const customerId = selectedCustomerId || null
+
+  const saleData = {
+    items: cart.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: item.price
+    })),
+    customerId: customerId,
+    customerName: customerName,
+    customer: customerName, // Also set the customer field for backward compatibility
+    paymentMethod,    
+  }
+
   // Calculate totals
   const calculateSubtotal = () => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)

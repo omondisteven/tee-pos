@@ -12,15 +12,17 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("USER")  // ADMIN, USER, MANAGER
-  avatar    String?  // Store avatar URL or base64
-  status    String   @default("ACTIVE")  // ACTIVE, INACTIVE
+  role      String   @default("USER")
+  avatar    String?
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   purchases Purchase[]
   sales     Sale[]
   payments  Payment[]
+  services  Service[]        // Add this for Garage services
+  servicePayments ServicePayment[]  // Add this for Garage payments
   settings  Settings?
 }
 
@@ -30,11 +32,12 @@ model Customer {
   phone     String?
   email     String?
   address   String?
-  status    String   @default("ACTIVE")  // ACTIVE, INACTIVE
+  status    String   @default("ACTIVE")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   sales     Sale[]
+  services  Service[]        // Add this for Garage services
   
   @@index([name])
   @@index([status])
@@ -98,7 +101,7 @@ model Sale {
   receiptNo       String   @unique
   customerId      String?
   customer        Customer? @relation(fields: [customerId], references: [id])
-  customerName    String?   // Denormalized for quick display
+  customerName    String?
   subtotal        Float
   tax             Float    @default(0)
   total           Float
@@ -123,6 +126,19 @@ model Sale {
   @@index([createdAt])
 }
 
+model SaleItem {
+  id         String   @id @default(cuid())
+  quantity   Int
+  price      Float
+  total      Float
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  saleId     String
+  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  
+  @@unique([saleId, productId])
+}
+
 model Payment {
   id            String   @id @default(cuid())
   saleId        String
@@ -136,19 +152,6 @@ model Payment {
   
   @@index([saleId])
   @@index([createdAt])
-}
-
-model SaleItem {
-  id         String   @id @default(cuid())
-  quantity   Int
-  price      Float
-  total      Float
-  productId  String
-  product    Product  @relation(fields: [productId], references: [id])
-  saleId     String
-  sale       Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  
-  @@unique([saleId, productId])
 }
 
 model Settings {
@@ -177,4 +180,70 @@ model Settings {
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ========================
+// GARAGE MODELS
+// ========================
+
+model ServiceCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  services    Service[]
+  
+  @@index([name])
+  @@index([status])
+}
+
+model Service {
+  id              String   @id @default(cuid())
+  workOrderNo     String   @unique
+  serviceCategoryId String
+  serviceCategory ServiceCategory @relation(fields: [serviceCategoryId], references: [id])
+  description     String?
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  customerName    String?
+  vehicleRegNo    String
+  agreedAmount    Float
+  depositPaid     Float    @default(0)
+  balance         Float    @default(0)
+  dueDate         DateTime
+  status          String   @default("PENDING")
+  paymentStatus   String   @default("PENDING")
+  completedAt     DateTime?
+  collectedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  
+  payments        ServicePayment[]
+  
+  @@index([workOrderNo])
+  @@index([customerId])
+  @@index([vehicleRegNo])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([dueDate])
+}
+
+model ServicePayment {
+  id            String   @id @default(cuid())
+  serviceId     String
+  service       Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  amount        Float
+  paymentMethod String   @default("CASH")
+  notes         String?
+  createdAt     DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  @@index([serviceId])
+  @@index([createdAt])
 }

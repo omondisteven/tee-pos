@@ -3,11 +3,14 @@
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
+import CompactTable from '@/components/UI/CompactTable'
 
 interface Sale {
   id: string
   receiptNo: string
-  customer: string
+  customer: string | null | { id: string; name: string; phone: string | null }
+  customerName: string | null
+  customerId: string | null
   subtotal: number
   tax: number
   total: number
@@ -89,6 +92,13 @@ export default function SalesPage() {
     setFilteredSales(filtered)
   }
 
+  const getCustomerName = (sale: Sale): string => {
+    if (sale.customerName) return sale.customerName
+    if (typeof sale.customer === 'string') return sale.customer
+    if (sale.customer && typeof sale.customer === 'object') return sale.customer.name
+    return 'Walk-in Customer'
+  }
+
   const totalAmount = filteredSales.reduce((sum, sale) => sum + sale.total, 0)
 
   const handlePrint = () => {
@@ -140,6 +150,41 @@ export default function SalesPage() {
   if (loading) {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
+
+  const saleColumns = [
+    { key: 'receiptNo', header: 'Receipt #', align: 'left' as const },
+    { key: 'customer', header: 'Customer', align: 'left' as const, render: (value: any, row: any) => getCustomerName(row) },
+    { key: 'total', header: 'Total', align: 'right' as const, render: (value: number) => formatCurrency(value) },
+    { key: 'createdAt', header: 'Date', align: 'left' as const, render: (value: string) => new Date(value).toLocaleDateString() },
+    { key: 'user', header: 'Sold By', align: 'left' as const, render: (value: any) => value?.name || 'Unknown' },
+    { key: 'status', header: 'Status', align: 'center' as const, render: (value: string) => (
+      <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+        value === 'ACTIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+      }`}>
+        {value}
+      </span>
+    )},
+    { key: 'actions', header: 'Actions', align: 'center' as const, render: (_: any, row: any) => (
+      <select
+        onChange={(e) => {
+          const action = e.target.value
+          if (action === 'view') {
+            setSelectedSale(row)
+          } else if (action === 'cancel' && row.status === 'ACTIVE') {
+            setCancellingSaleId(row.id)
+            setShowCancelModal(true)
+          }
+          e.target.value = ''
+        }}
+        className="text-xs border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded px-1.5 py-0.5"
+        defaultValue=""
+      >
+        <option value="" disabled>Actions</option>
+        <option value="view">View Details</option>
+        {row.status === 'ACTIVE' && <option value="cancel">Cancel Sale</option>}
+      </select>
+    )}
+  ]
 
   return (
     <div className="p-6">
@@ -234,7 +279,7 @@ export default function SalesPage() {
               {filteredSales.map((sale) => (
                 <tr key={sale.id}>
                   <td className="px-4 py-2">{sale.receiptNo}</td>
-                  <td className="px-4 py-2">{sale.customer || 'Walk-in'}</td>
+                  <td className="px-4 py-2">{getCustomerName(sale)}</td>
                   <td className="px-4 py-2 text-right">{formatCurrency(sale.total)}</td>
                   <td className="px-4 py-2">{new Date(sale.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-2">{sale.status}</td>
@@ -249,62 +294,9 @@ export default function SalesPage() {
       </div>
 
       {/* Sales Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Receipt #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Customer</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Sold By</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredSales.map((sale) => (
-                <tr key={sale.id} className={sale.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{sale.receiptNo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{sale.customer || 'Walk-in'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(sale.total)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{new Date(sale.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{sale.user?.name || 'Unknown'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      sale.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                    }`}>
-                      {sale.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
-                    <button
-                      onClick={() => setSelectedSale(sale)}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
-                    >
-                      View
-                    </button>
-                    {sale.status === 'ACTIVE' && (
-                      <button
-                        onClick={() => {
-                          setCancellingSaleId(sale.id)
-                          setShowCancelModal(true)
-                        }}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactTable columns={saleColumns} data={filteredSales} />
 
-      {/* View Details Modal - Update currency formatting */}
+      {/* View Details Modal */}
       {selectedSale && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white dark:bg-gray-800">
@@ -321,7 +313,7 @@ export default function SalesPage() {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <p><strong>Receipt #:</strong> {selectedSale.receiptNo}</p>
-                  <p><strong>Customer:</strong> {selectedSale.customer || 'Walk-in'}</p>
+                  <p><strong>Customer:</strong> {getCustomerName(selectedSale)}</p>
                 </div>
                 <div>
                   <p><strong>Date:</strong> {new Date(selectedSale.createdAt).toLocaleString()}</p>
@@ -356,7 +348,7 @@ export default function SalesPage() {
                     <td colSpan={3} className="px-4 py-2 text-right font-bold">VAT ({vatPercentage}%):</td>
                     <td className="px-4 py-2 text-right">{formatCurrency(selectedSale.tax)}</td>
                   </tr>
-                  <tr>
+                  <tr className="border-t">
                     <td colSpan={3} className="px-4 py-2 text-right text-lg font-bold">Total:</td>
                     <td className="px-4 py-2 text-right text-lg font-bold">{formatCurrency(selectedSale.total)}</td>
                   </tr>
