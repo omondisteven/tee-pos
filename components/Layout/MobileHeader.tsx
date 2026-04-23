@@ -5,10 +5,16 @@ import { useSidebar } from '@/context/SidebarContext'
 export default function MobileHeader() {
   const { toggleSidebar } = useSidebar()
 
+  const handleToggle = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    toggleSidebar()
+  }
+
   return (
     <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3 flex items-center justify-between">
       <button
-        onClick={toggleSidebar}
+        onClick={handleToggle}
         className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none"
         aria-label="Open menu"
       >

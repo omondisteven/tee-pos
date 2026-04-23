@@ -67,10 +67,8 @@ export default function Sidebar() {
     }
   }, [pathname])
 
-  // Close sidebar on navigation (mobile)
-  useEffect(() => {
-    closeSidebar()
-  }, [pathname, closeSidebar])
+  // REMOVED: The auto-close on navigation was causing the sidebar to close immediately
+  // Now the sidebar stays open until explicitly closed
 
   const isActive = (href: string) => {
     return pathname === href || pathname?.startsWith(href + '/')
@@ -127,6 +125,12 @@ export default function Sidebar() {
           <Link
             key={item.name}
             href={item.href}
+            onClick={() => {
+              // Close sidebar on mobile when navigating
+              if (window.innerWidth < 1024) {
+                closeSidebar()
+              }
+            }}
             className={`flex items-center px-4 py-2.5 text-sm transition-colors ${
               isActive(item.href)
                 ? 'bg-gray-900 text-white border-l-4 border-blue-500'
@@ -163,6 +167,11 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      closeSidebar()
+                    }
+                  }}
                   className={`flex items-center px-4 py-2 text-sm transition-colors ${
                     isActive(item.href)
                       ? 'bg-gray-900 text-white border-l-4 border-blue-500'
@@ -198,6 +207,11 @@ export default function Sidebar() {
                       <Link
                         key={item.name}
                         href={item.href}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) {
+                            closeSidebar()
+                          }
+                        }}
                         className={`flex items-center px-4 py-1.5 text-sm transition-colors ${
                           isActive(item.href)
                             ? 'bg-gray-900 text-white'
@@ -240,6 +254,11 @@ export default function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      closeSidebar()
+                    }
+                  }}
                   className={`flex items-center px-4 py-2 text-sm transition-colors ${
                     isActive(item.href)
                       ? 'bg-gray-900 text-white border-l-4 border-blue-500'
@@ -275,6 +294,11 @@ export default function Sidebar() {
                       <Link
                         key={item.name}
                         href={item.href}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) {
+                            closeSidebar()
+                          }
+                        }}
                         className={`flex items-center px-4 py-1.5 text-sm transition-colors ${
                           isActive(item.href)
                             ? 'bg-gray-900 text-white'
@@ -298,6 +322,11 @@ export default function Sidebar() {
         {/* Customers */}
         <Link
           href="/customers"
+          onClick={() => {
+            if (window.innerWidth < 1024) {
+              closeSidebar()
+            }
+          }}
           className={`flex items-center px-4 py-2.5 text-sm transition-colors ${
             isActive('/customers')
               ? 'bg-gray-900 text-white border-l-4 border-blue-500'
@@ -316,6 +345,11 @@ export default function Sidebar() {
           <Link
             key={item.name}
             href={item.href}
+            onClick={() => {
+              if (window.innerWidth < 1024) {
+                closeSidebar()
+              }
+            }}
             className={`flex items-center px-4 py-2.5 text-sm transition-colors ${
               isActive(item.href)
                 ? 'bg-gray-900 text-white border-l-4 border-blue-500'
