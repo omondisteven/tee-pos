@@ -8,11 +8,34 @@ export default function HomePage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token')
-    if (token) {
-      router.replace('/dashboard')
-    } else {
-      router.replace('/login')
+    
+    // Verify if token is valid
+    const verifyAndRedirect = async () => {
+      if (token) {
+        try {
+          const res = await fetch('/api/auth/me', {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+          
+          if (res.ok) {
+            router.replace('/dashboard')
+          } else {
+            // Invalid token, clear storage
+            localStorage.clear()
+            sessionStorage.clear()
+            router.replace('/login')
+          }
+        } catch (error) {
+          router.replace('/login')
+        }
+      } else {
+        router.replace('/login')
+      }
     }
+
+    verifyAndRedirect()
   }, [router])
 
   return (

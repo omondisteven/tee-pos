@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthenticatedUser } from '@/lib/auth'
 
+// Define types for better TypeScript support
 interface SaleItem {
   id: string
   quantity: number
@@ -15,7 +16,16 @@ interface SaleItem {
     price: number
     cost: number
     quantity: number
+    vatCategory: string
   }
+}
+
+interface Payment {
+  id: string
+  amount: number
+  paymentMethod: string
+  notes: string | null
+  createdAt: Date
 }
 
 interface Sale {
@@ -25,17 +35,21 @@ interface Sale {
   subtotal: number
   tax: number
   total: number
+  amountPaid: number
+  balance: number
   paymentMethod: string
+  paymentStatus: string
   status: string
   cancelReason: string | null
   cancelledAt: Date | null
   createdAt: Date
   userId: string
+  items: SaleItem[]
+  payments: Payment[]
   user: {
     name: string
     email: string
   }
-  items: SaleItem[]
 }
 
 export async function POST(req: NextRequest) {
@@ -46,7 +60,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { items, customer, paymentMethod, subtotal, tax, total } = body
+    const { items, customerId, customerName, paymentMethod, subtotal, tax, total, amountPaid } = body
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -55,7 +69,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check stock availability first (outside transaction)
+    // Check stock availability first
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.productId }
@@ -76,26 +90,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Calculate payment status
+    const paidAmount = amountPaid || 0
+    const balance = total - paidAmount
+    let paymentStatus = 'PAID'
+    if (balance > 0 && paidAmount > 0) {
+      paymentStatus = 'PARTIAL'
+    } else if (paidAmount === 0) {
+      paymentStatus = 'PENDING'
+    }
+
     // Generate receipt number
     const receiptNo = `SALE-${Date.now()}-${Math.floor(Math.random() * 1000)}`
 
-    // Create sale using sequential operations (no transaction to avoid issues)
     try {
-      // 1. Create the sale record
+      // Create sale
       const sale = await prisma.sale.create({
         data: {
           receiptNo,
-          customer: customer || null,
+          customerId: customerId || null,
+          customerName: customerName || null,
           paymentMethod,
           subtotal,
           tax,
           total,
+          amountPaid: paidAmount,
+          balance: balance,
+          paymentStatus,
           status: 'ACTIVE',
           userId: authUser.userId
         }
       })
 
-      // 2. Create all sale items
+      // Create sale items
       for (const item of items) {
         await prisma.saleItem.create({
           data: {
@@ -108,7 +135,20 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // 3. Update stock quantities
+      // Create payment record if amount paid > 0
+      if (paidAmount > 0) {
+        await prisma.payment.create({
+          data: {
+            saleId: sale.id,
+            amount: paidAmount,
+            paymentMethod,
+            notes: paymentStatus === 'PARTIAL' ? 'Partial payment' : 'Full payment',
+            userId: authUser.userId
+          }
+        })
+      }
+
+      // Update stock quantities
       for (const item of items) {
         await prisma.product.update({
           where: { id: item.productId },
@@ -120,7 +160,6 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // 4. Fetch the complete sale with items
       const completeSale = await prisma.sale.findUnique({
         where: { id: sale.id },
         include: {
@@ -129,6 +168,8 @@ export async function POST(req: NextRequest) {
               product: true
             }
           },
+          payments: true,
+          customer: true,  // Add this to include customer details
           user: {
             select: {
               name: true,
@@ -168,6 +209,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20')
     const search = searchParams.get('search') || ''
     const statusFilter = searchParams.get('status') || ''
+    const paymentStatus = searchParams.get('paymentStatus') || ''
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
@@ -179,6 +221,10 @@ export async function GET(req: NextRequest) {
 
     if (statusFilter && statusFilter !== 'ALL') {
       where.status = statusFilter
+    }
+
+    if (paymentStatus && paymentStatus !== 'ALL') {
+      where.paymentStatus = paymentStatus
     }
 
     if (startDate && endDate) {
@@ -197,6 +243,7 @@ export async function GET(req: NextRequest) {
               product: true
             }
           },
+          payments: true,
           user: {
             select: {
               name: true,
@@ -211,14 +258,14 @@ export async function GET(req: NextRequest) {
       prisma.sale.count({ where })
     ])
 
-    // Calculate total for filtered sales with proper typing
-    const totalAmount: number = (sales as Sale[]).reduce((sum: number, sale: Sale) => {
-      return sum + sale.total
-    }, 0)
+    // Fix: Add proper typing for reduce functions
+    const totalAmount = (sales as Sale[]).reduce((sum: number, sale: Sale) => sum + sale.total, 0)
+    const totalOutstanding = (sales as Sale[]).reduce((sum: number, sale: Sale) => sum + sale.balance, 0)
 
     return NextResponse.json({
       sales,
       totalAmount,
+      totalOutstanding,
       pagination: {
         page,
         limit,
@@ -235,6 +282,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Add payment to existing sale
 export async function PUT(req: NextRequest) {
   try {
     const authUser = await getAuthenticatedUser(req)
@@ -244,7 +292,7 @@ export async function PUT(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
-    const { action, cancelReason } = await req.json()
+    const { action, cancelReason, paymentAmount, paymentMethod } = await req.json()
 
     if (!id) {
       return NextResponse.json(
@@ -255,14 +303,77 @@ export async function PUT(req: NextRequest) {
 
     const sale = await prisma.sale.findUnique({
       where: { id },
-      include: { items: true }
-    })
+      include: { payments: true }
+    }) as Sale | null
 
     if (!sale) {
       return NextResponse.json(
         { error: 'Sale not found' },
         { status: 404 }
       )
+    }
+
+    if (action === 'ADD_PAYMENT') {
+      if (!paymentAmount || paymentAmount <= 0) {
+        return NextResponse.json(
+          { error: 'Valid payment amount is required' },
+          { status: 400 }
+        )
+      }
+
+      if (paymentAmount > sale.balance) {
+        return NextResponse.json(
+          { error: `Payment amount cannot exceed balance of ${sale.balance}` },
+          { status: 400 }
+        )
+      }
+
+      const newBalance = sale.balance - paymentAmount
+      const newPaidAmount = sale.amountPaid + paymentAmount
+      let paymentStatus = sale.paymentStatus
+      
+      if (newBalance === 0) {
+        paymentStatus = 'PAID'
+      } else if (newBalance > 0 && newPaidAmount > 0) {
+        paymentStatus = 'PARTIAL'
+      }
+
+      // Add payment record
+      await prisma.payment.create({
+        data: {
+          saleId: id,
+          amount: paymentAmount,
+          paymentMethod: paymentMethod || sale.paymentMethod,
+          notes: 'Additional payment',
+          userId: authUser.userId
+        }
+      })
+
+      // Update sale
+      const updatedSale = await prisma.sale.update({
+        where: { id },
+        data: {
+          amountPaid: newPaidAmount,
+          balance: newBalance,
+          paymentStatus
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          payments: true,
+          user: {
+            select: {
+              name: true,
+              email: true
+            }
+          }
+        }
+      })
+
+      return NextResponse.json(updatedSale)
     }
 
     if (action === 'CANCEL') {
@@ -273,7 +384,6 @@ export async function PUT(req: NextRequest) {
         )
       }
 
-      // @ts-ignore - status exists in database but TypeScript types haven't updated
       if (sale.status === 'CANCELLED') {
         return NextResponse.json(
           { error: 'Sale is already cancelled' },
@@ -281,8 +391,13 @@ export async function PUT(req: NextRequest) {
         )
       }
 
+      // Get sale items to reverse stock
+      const saleItems = await prisma.saleItem.findMany({
+        where: { saleId: id }
+      })
+
       // Reverse stock
-      for (const item of sale.items) {
+      for (const item of saleItems) {
         await prisma.product.update({
           where: { id: item.productId },
           data: {
@@ -293,20 +408,21 @@ export async function PUT(req: NextRequest) {
         })
       }
 
-      // Update sale status with type assertion
+      // Update sale status
       const updatedSale = await prisma.sale.update({
         where: { id },
         data: {
           status: 'CANCELLED',
           cancelReason,
           cancelledAt: new Date()
-        } as any,
+        },
         include: {
           items: {
             include: {
               product: true
             }
           },
+          payments: true,
           user: {
             select: {
               name: true,

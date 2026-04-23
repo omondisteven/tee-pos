@@ -12,13 +12,32 @@ model User {
   email     String   @unique
   password  String
   name      String
-  role      String   @default("USER")
+  role      String   @default("USER")  // ADMIN, USER, MANAGER
+  avatar    String?  // Store avatar URL or base64
+  status    String   @default("ACTIVE")  // ACTIVE, INACTIVE
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   purchases Purchase[]
   sales     Sale[]
-  settings  Settings?  // Add this line for the relation
+  payments  Payment[]
+  settings  Settings?
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  status    String   @default("ACTIVE")  // ACTIVE, INACTIVE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  sales     Sale[]
+  
+  @@index([name])
+  @@index([status])
 }
 
 model Product {
@@ -30,7 +49,7 @@ model Product {
   cost        Float
   quantity    Int      @default(0)
   lowStockThreshold Int @default(5)
-  vatCategory  String   @default("VATABLE")  // VATABLE or NON_VATABLE
+  vatCategory  String   @default("VATABLE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -46,7 +65,7 @@ model Purchase {
   invoiceNo    String   @unique
   supplier     String?
   total        Float
-  status       String   @default("ACTIVE")  // ACTIVE, CANCELLED
+  status       String   @default("ACTIVE")
   cancelReason String?
   cancelledAt  DateTime?
   createdAt    DateTime @default(now())
@@ -75,24 +94,47 @@ model PurchaseItem {
 }
 
 model Sale {
-  id           String   @id @default(cuid())
-  receiptNo    String   @unique
-  customer     String?
-  subtotal     Float
-  tax          Float    @default(0)
-  total        Float
-  paymentMethod String   @default("CASH")
-  status       String   @default("ACTIVE")  // ACTIVE, CANCELLED
-  cancelReason String?
-  cancelledAt  DateTime?
-  createdAt    DateTime @default(now())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  id              String   @id @default(cuid())
+  receiptNo       String   @unique
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  customerName    String?   // Denormalized for quick display
+  subtotal        Float
+  tax             Float    @default(0)
+  total           Float
+  amountPaid      Float    @default(0)
+  balance         Float    @default(0)
+  paymentMethod   String   @default("CASH")
+  paymentStatus   String   @default("PAID")
+  status          String   @default("ACTIVE")
+  cancelReason    String?
+  cancelledAt     DateTime?
+  createdAt       DateTime @default(now())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
   
-  items        SaleItem[]
+  items           SaleItem[]
+  payments        Payment[]
   
   @@index([receiptNo])
+  @@index([customerId])
   @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  saleId        String
+  sale          Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  amount        Float
+  paymentMethod String   @default("CASH")
+  notes         String?
+  createdAt     DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  @@index([saleId])
   @@index([createdAt])
 }
 
@@ -114,28 +156,24 @@ model Settings {
   userId          String   @unique
   user            User     @relation(fields: [userId], references: [id])
   
-  // Theme settings
-  theme           String   @default("LIGHT")  // LIGHT, DARK
-  currency        String   @default("USD")
-  currencySymbol  String   @default("$")
-  vatPercentage   Int      @default(10)
+  theme           String   @default("LIGHT")
+  currency        String   @default("KES")
+  currencySymbol  String   @default("KSh")
+  vatPercentage   Int      @default(16)
+  decimalPlaces   Int      @default(2)
   
-  // Notification settings
   lowStockAlert   Boolean  @default(true)
   autoBackup      Boolean  @default(false)
   
-  // Display settings
-  dateFormat      String   @default("MM/DD/YYYY")
-  language        String   @default("EN")  // EN, FR, ES, etc.
+  dateFormat      String   @default("DD/MM/YYYY")
+  language        String   @default("EN")
   
-  // Receipt settings
   receiptFooter   String   @default("Thank you for your business!")
   
-  // Company info
   companyName     String   @default("Stock Management System")
-  companyEmail    String   @default("admin@example.com")
-  companyPhone    String   @default("+1 234 567 8900")
-  companyAddress  String   @default("123 Business St, City, Country")
+  companyEmail    String   @default("info@stockmanager.co.ke")
+  companyPhone    String   @default("+254 700 000 000")
+  companyAddress  String   @default("Nairobi, Kenya")
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

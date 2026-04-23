@@ -26,10 +26,15 @@ interface SaleData {
   id: string
   receiptNo: string
   customer: string | null
+  customerName: string | null  
+  customerId: string | null    
   subtotal: number
   tax: number
   total: number
+  amountPaid?: number
+  balance?: number
   paymentMethod: string
+  paymentStatus?: string
   createdAt: string
   items: Array<{
     id: string
@@ -47,21 +52,65 @@ interface SaleData {
   }
 }
 
+interface Customer {
+  id: string
+  name: string
+  phone: string | null
+}
+
 export default function POSPage() {
-  const { formatCurrency, vatPercentage, refreshSettings } = useCurrency()
   const [products, setProducts] = useState<Product[]>([])
   const [cart, setCart] = useState<CartItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
-  const [customer, setCustomer] = useState('')
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [selectedCustomerId, setSelectedCustomerId] = useState('')
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('CASH')
   const [loading, setLoading] = useState(false)
   const [showReceiptDialog, setShowReceiptDialog] = useState(false)
   const [lastSale, setLastSale] = useState<SaleData | null>(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
+  const [amountPaid, setAmountPaid] = useState('')
+  const [balance, setBalance] = useState(0)
+  const { formatCurrency, vatPercentage, refreshSettings, decimalPlaces } = useCurrency()
+
+  // Calculate totals
+  const calculateSubtotal = () => {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+  }
+
+  const calculateTax = () => {
+    const vatableTotal = cart.reduce((sum, item) => {
+      if (item.vatCategory === 'VATABLE') {
+        return sum + (item.price * item.quantity)
+      }
+      return sum
+    }, 0)
+    return vatableTotal * (vatPercentage / 100)
+  }
+
+  const calculateTotal = () => {
+    return calculateSubtotal() + calculateTax()
+  }
+
+  // Update amount paid to cart total whenever cart changes
+  useEffect(() => {
+    const total = calculateTotal()
+    // Set amount paid to the actual total value
+    setAmountPaid(total.toString())
+  }, [cart])
+
+  // Update balance when amount paid or cart changes
+  useEffect(() => {
+    const total = calculateTotal()
+    const paid = parseFloat(amountPaid) || 0
+    setBalance(Math.max(0, total - paid))
+  }, [amountPaid, cart])
 
   useEffect(() => {
     fetchProducts()
+    fetchCustomers()
     refreshSettings()
   }, [])
 
@@ -75,6 +124,19 @@ export default function POSPage() {
       setProducts(data.products || [])
     } catch (error) {
       toast.error('Failed to load products')
+    }
+  }
+
+  const fetchCustomers = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/customers', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      setCustomers(data)
+    } catch (error) {
+      console.error('Failed to fetch customers')
     }
   }
 
@@ -133,25 +195,6 @@ export default function POSPage() {
     }
   }
 
-  const calculateSubtotal = () => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  }
-
-  // Calculate VAT using dynamic percentage from settings
-  const calculateTax = () => {
-    const vatableTotal = cart.reduce((sum, item) => {
-      if (item.vatCategory === 'VATABLE') {
-        return sum + (item.price * item.quantity)
-      }
-      return sum
-    }, 0)
-    return vatableTotal * (vatPercentage / 100)
-  }
-
-  const calculateTotal = () => {
-    return calculateSubtotal() + calculateTax()
-  }
-
   const handlePrintReceipt = () => {
     const printContent = printRef.current
     if (printContent) {
@@ -169,6 +212,23 @@ export default function POSPage() {
       return
     }
 
+    const total = calculateTotal()
+    const paid = parseFloat(amountPaid) || 0
+    
+    if (paid > total) {
+      toast.error('Amount paid cannot exceed total amount')
+      return
+    }
+
+    // Validate: For partial payment, customer must be selected
+    if (paid < total && !selectedCustomerId) {
+      toast.error('Customer selection is required for partial payment')
+      return
+    }
+
+    const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
+    const customerName = selectedCustomer?.name || ''
+
     setLoading(true)
     try {
       const token = localStorage.getItem('token')
@@ -178,11 +238,13 @@ export default function POSPage() {
           quantity: item.quantity,
           price: item.price
         })),
-        customer,
+        customerId: selectedCustomerId || null,
+        customerName: customerName,
         paymentMethod,
         subtotal: calculateSubtotal(),
         tax: calculateTax(),
-        total: calculateTotal()
+        total: total,
+        amountPaid: paid
       }
 
       const res = await fetch('/api/sales', {
@@ -199,8 +261,9 @@ export default function POSPage() {
         setLastSale(sale)
         setShowReceiptDialog(true)
         setCart([])
-        setCustomer('')
-        fetchProducts() // Refresh products to update stock
+        setSelectedCustomerId('')
+        setAmountPaid('')
+        fetchProducts()
       } else {
         const error = await res.json()
         toast.error(error.error || 'Sale failed')
@@ -236,6 +299,32 @@ export default function POSPage() {
     }
     return sum
   }, 0)
+
+  const totalAmount = calculateTotal()
+
+  const formatAmountForInput = (value: string) => {
+  if (!value) return ''
+  const num = parseFloat(value)
+  if (isNaN(num)) return ''
+  return num.toFixed(decimalPlaces)
+}
+
+  const handleAmountPaidChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value
+    // Remove any non-digit characters except decimal point
+    value = value.replace(/[^\d.]/g, '')
+    // Ensure only one decimal point
+    const parts = value.split('.')
+    if (parts.length > 2) {
+      value = parts[0] + '.' + parts.slice(1).join('')
+    }
+    // Limit decimal places
+    if (parts.length === 2 && parts[1].length > decimalPlaces) {
+      value = parts[0] + '.' + parts[1].substring(0, decimalPlaces)
+    }
+    setAmountPaid(value)
+  }
+
 
   return (
     <div className="h-full">
@@ -358,15 +447,84 @@ export default function POSPage() {
             </div>
             <div className="flex justify-between font-bold text-lg dark:text-white">
               <span>Total:</span>
-              <span>{formatCurrency(calculateTotal())}</span>
+              <span>{formatCurrency(totalAmount)}</span>
             </div>
-            <input
-              type="text"
-              placeholder="Customer name (optional)"
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
-            />
+            
+            {/* Partial Payment Fields */}
+            <div className="pt-2 border-t dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Amount Paid
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={amountPaid}
+                onChange={handleAmountPaidChange}
+                onBlur={() => {
+                  // Format on blur to ensure proper decimal places
+                  if (amountPaid) {
+                    const num = parseFloat(amountPaid)
+                    if (!isNaN(num)) {
+                      setAmountPaid(num.toFixed(decimalPlaces))
+                    }
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                placeholder="0.00"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Default is full amount. Edit for partial payment. ({decimalPlaces} decimal places)
+              </p>
+            </div>
+            
+            <div className="flex justify-between items-center pt-2">
+              <span className="font-semibold dark:text-white">Balance Due:</span>
+              <span className={`text-lg font-bold ${balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {formatCurrency(balance)}
+              </span>
+            </div>
+            
+            {/* Customer Selection */}
+            <div className="relative">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Customer {balance > 0 && <span className="text-red-500">* (Required for partial payment)</span>}
+              </label>
+              <input
+                type="text"
+                value={selectedCustomerId ? customers.find(c => c.id === selectedCustomerId)?.name || '' : ''}
+                onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                placeholder="Select or search customer..."
+                className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded cursor-pointer"
+                readOnly
+              />
+              {showCustomerDropdown && (
+                <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded shadow-lg max-h-60 overflow-y-auto">
+                  <div
+                    onClick={() => {
+                      setSelectedCustomerId('')
+                      setShowCustomerDropdown(false)
+                    }}
+                    className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600"
+                  >
+                    <span className="text-gray-500">-- Walk-in Customer --</span>
+                  </div>
+                  {customers.map((customer) => (
+                    <div
+                      key={customer.id}
+                      onClick={() => {
+                        setSelectedCustomerId(customer.id)
+                        setShowCustomerDropdown(false)
+                      }}
+                      className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600"
+                    >
+                      <div className="font-medium dark:text-white">{customer.name}</div>
+                      {customer.phone && <div className="text-xs text-gray-500 dark:text-gray-400">{customer.phone}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
@@ -455,10 +613,13 @@ export default function POSPage() {
                   <p className="text-gray-600 dark:text-gray-400">Stock Management System</p>
                 </div>
 
+                // In the receipt modal, update the customer display section:
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <p className="dark:text-gray-300"><strong>Receipt #:</strong> {lastSale.receiptNo}</p>
-                    <p className="dark:text-gray-300"><strong>Customer:</strong> {lastSale.customer || 'Walk-in'}</p>
+                    <p className="dark:text-gray-300"><strong>Customer:</strong> {
+                      lastSale.customerName || lastSale.customer || 'Walk-in Customer'
+                    }</p>
                   </div>
                   <div>
                     <p className="dark:text-gray-300"><strong>Date:</strong> {new Date(lastSale.createdAt).toLocaleString()}</p>
@@ -491,7 +652,7 @@ export default function POSPage() {
                     ))}
                   </tbody>
                   <tfoot className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
+                    <tr className="border-t dark:border-gray-600">
                       <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Subtotal:</td>
                       <td className="px-4 py-2 text-right dark:text-gray-300">{formatCurrency(lastSale.subtotal)}</td>
                     </tr>
@@ -503,12 +664,27 @@ export default function POSPage() {
                       <td colSpan={4} className="px-4 py-2 text-right text-lg font-bold dark:text-gray-300">Total:</td>
                       <td className="px-4 py-2 text-right text-lg font-bold dark:text-gray-300">{formatCurrency(lastSale.total)}</td>
                     </tr>
+                    {lastSale.amountPaid !== undefined && lastSale.amountPaid > 0 && (
+                      <>
+                        <tr className="border-t dark:border-gray-600">
+                          <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Amount Paid:</td>
+                          <td className="px-4 py-2 text-right text-green-600 dark:text-green-400">{formatCurrency(lastSale.amountPaid)}</td>
+                        </tr>
+                        <tr className="border-t dark:border-gray-600">
+                          <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Balance Due:</td>
+                          <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{formatCurrency(lastSale.balance || 0)}</td>
+                        </tr>
+                      </>
+                    )}
                   </tfoot>
                 </table>
 
                 <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
                   <p>Thank you for your business!</p>
                   <p>VAT is charged at {vatPercentage}% on vatable items only.</p>
+                  {lastSale.balance && lastSale.balance > 0 && (
+                    <p className="text-red-600 dark:text-red-400 mt-2">Outstanding Balance: {formatCurrency(lastSale.balance)}</p>
+                  )}
                   <p>This is a computer-generated receipt. No signature required.</p>
                 </div>
               </div>

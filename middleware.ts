@@ -7,7 +7,7 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
 
   // Define protected routes
-  const protectedRoutes = ['/dashboard', '/pos', '/products', '/sales', '/purchases', '/reports']
+  const protectedRoutes = ['/dashboard', '/pos', '/products', '/sales', '/purchases', '/reports', '/customers', '/users', '/settings']
   const isProtectedRoute = protectedRoutes.some(route => path.startsWith(route))
   const isAuthRoute = path === '/login' || path === '/register'
   const isApiRoute = path.startsWith('/api')
@@ -60,6 +60,9 @@ export const config = {
     '/sales/:path*',
     '/purchases/:path*',
     '/reports/:path*',
+    '/customers/:path*',
+    '/users/:path*',
+    '/settings/:path*',
     '/login',
     '/register'
   ]

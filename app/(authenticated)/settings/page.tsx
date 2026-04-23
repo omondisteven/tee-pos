@@ -10,6 +10,7 @@ interface Settings {
   currency: string
   currencySymbol: string
   vatPercentage: number
+  decimalPlaces: number
   lowStockAlert: boolean
   autoBackup: boolean
   dateFormat: string
@@ -20,6 +21,24 @@ interface Settings {
   companyPhone: string
   companyAddress: string
 }
+
+const defaultSettings = {
+  theme: 'LIGHT',
+  currency: 'KES',
+  currencySymbol: 'KSh',
+  vatPercentage: 16,
+  decimalPlaces: 2,  // Add this
+  lowStockAlert: true,
+  autoBackup: false,
+  dateFormat: 'DD/MM/YYYY',
+  language: 'EN',
+  receiptFooter: 'Thank you for your business!',
+  companyName: 'Stock Management System',
+  companyEmail: 'info@stockmanager.co.ke',
+  companyPhone: '+254 700 000 000',
+  companyAddress: 'Nairobi, Kenya'
+}
+
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -292,6 +311,24 @@ export default function SettingsPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Default VAT rate for taxable items</p>
               </div>
+
+                    {/* Decimal places settings */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Decimal Places for Amounts
+                    </label>
+                    <select
+                        value={settings.decimalPlaces}
+                        onChange={(e) => setSettings({ ...settings, decimalPlaces: parseInt(e.target.value) })}
+                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="0">0 decimal places (e.g., 1,234)</option>
+                        <option value="1">1 decimal place (e.g., 1,234.5)</option>
+                        <option value="2">2 decimal places (e.g., 1,234.56)</option>
+                        <option value="3">3 decimal places (e.g., 1,234.567)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Number of decimal places shown for all currency amounts</p>
+                </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
                 <select
