@@ -32,25 +32,26 @@ interface Sale {
   }>
 }
 
-interface SalesItem {
+interface SalesItemLine {
+  id: string
+  saleId: string
+  receiptNo: string
+  saleDate: Date
   productId: string
   productName: string
   productSku: string
-  totalQuantity: number
-  totalRevenue: number
+  quantity: number
+  price: number
+  total: number
   vatCategory: string
-  saleCount: number
-  // Store the actual sale timestamps
-  saleTimestamps: Date[]
 }
-
 
 export default function SalesPage() {
   const { formatCurrency, vatPercentage } = useCurrency()
   const [sales, setSales] = useState<Sale[]>([])
   const [filteredSales, setFilteredSales] = useState<Sale[]>([])
-  const [salesItems, setSalesItems] = useState<SalesItem[]>([])
-  const [filteredItems, setFilteredItems] = useState<SalesItem[]>([])
+  const [saleItemLines, setSaleItemLines] = useState<SalesItemLine[]>([])
+  const [filteredItemLines, setFilteredItemLines] = useState<SalesItemLine[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -67,56 +68,14 @@ export default function SalesPage() {
     fetchSales()
   }, [])
 
-  useEffect(() => {
-    if (viewMode === 'receipts') {
-      filterSales()
-    } else {
-      filterItems()
-    }
-  }, [searchTerm, statusFilter, startDate, endDate, sales, viewMode])
-
-  // Update the fetchSales function to track timestamps
-  const fetchSales = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const res = await fetch('/api/sales', {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      const data = await res.json()
-      setSales(data.sales || [])
-      
-      // Process items data with timestamp tracking
-      const itemsMap = new Map<string, SalesItem>()
-      for (const sale of (data.sales || [])) {
-        const saleDate = new Date(sale.createdAt)
-        for (const item of sale.items) {
-          const key = item.product.id
-          if (itemsMap.has(key)) {
-            const existing = itemsMap.get(key)!
-            existing.totalQuantity += item.quantity
-            existing.totalRevenue += item.total
-            existing.saleCount += 1
-            existing.saleTimestamps.push(saleDate)
-          } else {
-            itemsMap.set(key, {
-              productId: item.product.id,
-              productName: item.product.name,
-              productSku: item.product.sku,
-              totalQuantity: item.quantity,
-              totalRevenue: item.total,
-              vatCategory: item.product.vatCategory,
-              saleCount: 1,
-              saleTimestamps: [saleDate]
-            })
-          }
-        }
-      }
-      setSalesItems(Array.from(itemsMap.values()))
-    } catch (error) {
-      toast.error('Failed to fetch sales')
-    } finally {
-      setLoading(false)
-    }
+  // Helper function to format date in long format YYYY:MM:DD:HH:MM
+  const formatDateTime = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}:${month}:${day}:${hours}:${minutes}`
   }
 
   const filterSales = () => {
@@ -145,85 +104,91 @@ export default function SalesPage() {
     setFilteredSales(filtered)
   }
 
-  // Update the filterItems function to track timestamps
-  const filterItems = () => {
-    let filtered = [...salesItems]
+  const filterItemLines = () => {
+    let filtered = [...saleItemLines]
 
     if (searchTerm) {
       filtered = filtered.filter(item =>
         item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.productSku.toLowerCase().includes(searchTerm.toLowerCase())
+        item.productSku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.receiptNo.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
 
-    // Date filtering for items
+    // Date filtering
     if (startDate && endDate) {
-      const dateFilteredSales = sales.filter(sale => {
-        const saleDate = new Date(sale.createdAt)
+      filtered = filtered.filter(item => {
+        const itemDate = item.saleDate
         const start = new Date(startDate)
         const end = new Date(endDate)
         end.setHours(23, 59, 59)
-        return saleDate >= start && saleDate <= end
+        return itemDate >= start && itemDate <= end
       })
-      
-      const itemsMap = new Map<string, SalesItem>()
-      for (const sale of dateFilteredSales) {
-        const saleDate = new Date(sale.createdAt)
-        for (const item of sale.items) {
-          const key = item.product.id
-          if (itemsMap.has(key)) {
-            const existing = itemsMap.get(key)!
-            existing.totalQuantity += item.quantity
-            existing.totalRevenue += item.total
-            existing.saleCount += 1
-            existing.saleTimestamps.push(saleDate)
-          } else {
-            itemsMap.set(key, {
-              productId: item.product.id,
-              productName: item.product.name,
-              productSku: item.product.sku,
-              totalQuantity: item.quantity,
-              totalRevenue: item.total,
-              vatCategory: item.product.vatCategory,
-              saleCount: 1,
-              saleTimestamps: [saleDate]
-            })
-          }
-        }
-      }
-      filtered = Array.from(itemsMap.values())
     }
 
-    // Apply search filter again after date filtering
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.productSku.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    setFilteredItems(filtered)
+    setFilteredItemLines(filtered)
   }
 
-  // Fix the getCustomerName function
+  const fetchSales = async () => {
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch('/api/sales', {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      const data = await res.json()
+      setSales(data.sales || [])
+      
+      // Create individual line items for each sale item
+      const itemsList: SalesItemLine[] = []
+      for (const sale of (data.sales || [])) {
+        const saleDate = new Date(sale.createdAt)
+        for (const item of sale.items) {
+          itemsList.push({
+            id: item.id,
+            saleId: sale.id,
+            receiptNo: sale.receiptNo,
+            saleDate: saleDate,
+            productId: item.product.id,
+            productName: item.product.name,
+            productSku: item.product.sku,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.total,
+            vatCategory: item.product.vatCategory
+          })
+        }
+      }
+      // Sort by date (newest first)
+      itemsList.sort((a, b) => b.saleDate.getTime() - a.saleDate.getTime())
+      setSaleItemLines(itemsList)
+      setFilteredItemLines(itemsList)
+    } catch (error) {
+      toast.error('Failed to fetch sales')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (viewMode === 'receipts') {
+      filterSales()
+    } else {
+      filterItemLines()
+    }
+  }, [searchTerm, statusFilter, startDate, endDate, sales, viewMode])
+
   const getCustomerName = (sale: Sale): string => {
-    // Check customerName first (denormalized field)
     if (sale.customerName) return sale.customerName
-    
-    // Check if customer is a string
     if (typeof sale.customer === 'string') return sale.customer
-    
-    // Check if customer is an object with name property
     if (sale.customer && typeof sale.customer === 'object' && 'name' in sale.customer) {
       return (sale.customer as { name: string }).name
     }
-    
     return 'Walk-in Customer'
   }
 
   const totalAmount = viewMode === 'receipts' 
     ? filteredSales.reduce((sum, sale) => sum + sale.total, 0)
-    : filteredItems.reduce((sum, item) => sum + item.totalRevenue, 0)
+    : filteredItemLines.reduce((sum, item) => sum + item.total, 0)
 
   const handlePrint = () => {
     const printContent = printRef.current
@@ -275,28 +240,6 @@ export default function SalesPage() {
     return <div className="flex justify-center items-center h-full">Loading...</div>
   }
 
-  // Helper function to format date in long format YYYY:MM:DD:HH:MM
-  const formatDateTime = (date: Date): string => {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}:${month}:${day}:${hours}:${minutes}`
-  }
-
-  // Helper function to format multiple dates
-  const formatSaleTimes = (timestamps: Date[]): string => {
-    if (timestamps.length === 0) return '-'
-    // Sort timestamps chronologically
-    const sorted = [...timestamps].sort((a, b) => a.getTime() - b.getTime())
-    if (sorted.length === 1) {
-      return formatDateTime(sorted[0])
-    }
-    // For multiple sales, show the count and first occurrence
-    return `${sorted.length}x (first: ${formatDateTime(sorted[0])})`
-  }
-
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6 dark:text-white">Sales History</h1>
@@ -329,7 +272,7 @@ export default function SalesPage() {
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {viewMode === 'receipts' 
               ? 'Viewing sales by receipt. Click on a receipt to see details.' 
-              : 'Viewing sales by product. Shows total quantity sold and revenue per item.'}
+              : 'Viewing individual sales items with their respective timestamps.'}
           </div>
         </div>
       </div>
@@ -339,11 +282,11 @@ export default function SalesPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {viewMode === 'receipts' ? 'Search by Receipt #' : 'Search by Product'}
+              {viewMode === 'receipts' ? 'Search by Receipt #' : 'Search by Product or Receipt'}
             </label>
             <input
               type="text"
-              placeholder={viewMode === 'receipts' ? "Receipt number..." : "Product name or SKU..."}
+              placeholder={viewMode === 'receipts' ? "Receipt number..." : "Product name, SKU, or receipt..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -395,7 +338,7 @@ export default function SalesPage() {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {viewMode === 'receipts' 
                 ? `${filteredSales.length} transactions`
-                : `${filteredItems.length} products sold`}
+                : `${filteredItemLines.length} items sold`}
             </p>
           </div>
           <button
@@ -411,7 +354,7 @@ export default function SalesPage() {
       <div ref={printRef} className="hidden">
         <div className="p-8">
           <h1 className="text-2xl font-bold text-center mb-4">
-            {viewMode === 'receipts' ? 'Sales Report' : 'Product Sales Report'}
+            {viewMode === 'receipts' ? 'Sales Report' : 'Itemized Sales Report'}
           </h1>
           <p className="text-center text-gray-600 mb-6">
             Generated on {new Date().toLocaleString()}
@@ -439,7 +382,7 @@ export default function SalesPage() {
                     <td className="px-4 py-2">{sale.receiptNo}</td>
                     <td className="px-4 py-2">{getCustomerName(sale)}</td>
                     <td className="px-4 py-2 text-right">{formatCurrency(sale.total)}</td>
-                    <td className="px-4 py-2">{new Date(sale.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-2">{new Date(sale.createdAt).toLocaleString()}</td>
                     <td className="px-4 py-2">{sale.status}</td>
                   </tr>
                 ))}
@@ -449,25 +392,25 @@ export default function SalesPage() {
             <table className="min-w-full divide-y divide-gray-200 mb-4">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-4 py-2 text-left">Date/Time</th>
+                  <th className="px-4 py-2 text-left">Receipt #</th>
                   <th className="px-4 py-2 text-left">Product Name</th>
                   <th className="px-4 py-2 text-left">SKU</th>
-                  <th className="px-4 py-2 text-right">Quantity Sold</th>
-                  <th className="px-4 py-2 text-right">Total Revenue</th>
-                  <th className="px-4 py-2 text-center">VAT</th>
-                  <th className="px-4 py-2 text-right">Times Sold</th>
+                  <th className="px-4 py-2 text-right">Quantity</th>
+                  <th className="px-4 py-2 text-right">Unit Price</th>
+                  <th className="px-4 py-2 text-right">Total</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item) => (
-                  <tr key={item.productId}>
+                {filteredItemLines.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-2">{formatDateTime(item.saleDate)}</td>
+                    <td className="px-4 py-2">{item.receiptNo}</td>
                     <td className="px-4 py-2">{item.productName}</td>
                     <td className="px-4 py-2">{item.productSku}</td>
-                    <td className="px-4 py-2 text-right">{item.totalQuantity}</td>
-                    <td className="px-4 py-2 text-right">{formatCurrency(item.totalRevenue)}</td>
-                    <td className="px-4 py-2 text-center">
-                      {item.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}
-                    </td>
-                    <td className="px-4 py-2 text-right">{item.saleCount}</td>
+                    <td className="px-4 py-2 text-right">{item.quantity}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(item.price)}</td>
+                    <td className="px-4 py-2 text-right">{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -508,7 +451,7 @@ export default function SalesPage() {
                       {formatCurrency(sale.total)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(sale.createdAt).toLocaleDateString()}
+                      {new Date(sale.createdAt).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                       {sale.user?.name || 'Unknown'}
@@ -550,30 +493,60 @@ export default function SalesPage() {
         </div>
       )}
 
-      {/* Data Table - Items View */}
+      {/* Data Table - Items View - Individual sale lines */}
       {viewMode === 'items' && (
-        <table className="min-w-full divide-y divide-gray-200 mb-4">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left">Times Sold (Date/Time)</th>
-              <th className="px-4 py-2 text-left">Product Name</th>
-              <th className="px-4 py-2 text-left">SKU</th>
-              <th className="px-4 py-2 text-right">Quantity Sold</th>
-              <th className="px-4 py-2 text-right">Total Revenue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((item) => (
-              <tr key={item.productId}>
-                <td className="px-4 py-2">{formatSaleTimes(item.saleTimestamps)}</td>
-                <td className="px-4 py-2">{item.productName}</td>
-                <td className="px-4 py-2">{item.productSku}</td>
-                <td className="px-4 py-2 text-right">{item.totalQuantity}</td>
-                <td className="px-4 py-2 text-right">{formatCurrency(item.totalRevenue)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date/Time</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Receipt #</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Product Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">SKU</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Quantity</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit Price</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredItemLines.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                      No items found for the selected period
+                    </td>
+                  </tr>
+                ) : (
+                  filteredItemLines.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {formatDateTime(item.saleDate)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {item.receiptNo}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                        {item.productName}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                        {item.productSku}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
+                        {item.quantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">
+                        {formatCurrency(item.price)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-green-600 dark:text-green-400">
+                        {formatCurrency(item.total)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* View Details Modal - Only for receipts view */}
