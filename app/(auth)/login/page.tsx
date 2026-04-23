@@ -1,11 +1,13 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
-export default function LoginPage() {
+// Create a separate component that uses useSearchParams
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
@@ -26,16 +28,13 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (res.ok) {
-        // Store token in localStorage
         localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify(data.user))
         
         toast.success('Login successful!')
         
-        // Get the redirect URL
         const from = searchParams.get('from') || '/dashboard'
         
-        // Use router.push with a small delay to ensure storage is set
         setTimeout(() => {
           router.push(from)
         }, 100)
@@ -43,7 +42,6 @@ export default function LoginPage() {
         toast.error(data.error || 'Login failed')
       }
     } catch (error) {
-      console.error('Login error:', error)
       toast.error('An error occurred')
     } finally {
       setLoading(false)
@@ -55,7 +53,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <div>
           <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Stock Management System - Licensed to Mike Osano
+            Stock Management System
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
             Sign in to your account
@@ -107,5 +105,18 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense boundary
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">Loading...</div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
