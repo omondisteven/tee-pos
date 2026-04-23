@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Sidebar from '@/components/Layout/Sidebar'
 import Navbar from '@/components/Layout/Navbar'
+import MobileHeader from '@/components/Layout/MobileHeader'
 
 export default function AuthenticatedLayout({
   children,
@@ -37,9 +38,14 @@ export default function AuthenticatedLayout({
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
+        <MobileHeader />
+        <div className="hidden lg:block">
+          <Navbar />
+        </div>
+        <main className="flex-1 overflow-y-auto pt-14 lg:pt-0">
+          <div className="p-4 lg:p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>
