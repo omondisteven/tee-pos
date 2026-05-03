@@ -102,7 +102,10 @@ function LoginForm() {
           <Link href="/register" className="text-sm text-blue-600 hover:text-blue-500">
             Don't have an account? Register
           </Link>
-        </div>
+        </div>        
+      </div>
+      <div className="text-center text-[10px] text-gray-400 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <p>© 2026 TEEVOS SOLUTIONS | 254 722 748262</p>
       </div>
     </div>
   )

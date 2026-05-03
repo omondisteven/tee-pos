@@ -362,8 +362,9 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-gray-700 text-xs text-gray-500 text-center">
-        v1.0.0
+      <div className="p-3 border-t border-gray-700 text-[10px] text-gray-500 text-center">
+        <p>v1.0.0 | © 2026 TEEVOS SOLUTIONS</p>
+        <p className="mt-0.5">254 722 748262</p>
       </div>
     </>
   )
