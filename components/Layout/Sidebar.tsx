@@ -1,3 +1,4 @@
+// components/Layout/Sidebar.tsx
 'use client'
 
 import Link from 'next/link'
@@ -7,11 +8,12 @@ import { useSidebar } from '@/context/SidebarContext'
 
 interface User {
   role: string
-}
+} 
 
 const shopMainItems = [
   { name: 'POS', href: '/pos', icon: '🛒' },
   { name: 'Products', href: '/products', icon: '📦' },
+  { name: 'Purchases', href: '/purchases', icon: '🛍️' },
   { name: 'Sales', href: '/sales', icon: '💰' },
 ]
 
@@ -56,9 +58,14 @@ export default function Sidebar() {
       } else {
         setExpandedGarageReports(false)
       }
-    } else if (pathname === '/' || pathname?.startsWith('/dashboard') || 
-               pathname?.startsWith('/pos') || pathname?.startsWith('/products') ||
-               pathname?.startsWith('/sales')) {
+    } else if (
+      pathname === '/' ||
+      pathname?.startsWith('/dashboard') ||
+      pathname?.startsWith('/pos') ||
+      pathname?.startsWith('/products') ||
+      pathname?.startsWith('/purchases') ||
+      pathname?.startsWith('/sales')
+    ) {
       setExpandedModule('shop')
       setExpandedShopReports(false)
     } else if (pathname?.startsWith('/reports')) {

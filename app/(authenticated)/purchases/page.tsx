@@ -1,3 +1,4 @@
+//app\(authenticated)\purchases\page.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -8,7 +9,7 @@ import PurchaseDetailsModal from '@/components/Purchases/PurchaseDetailsModal'
 
 interface Purchase {
   id: string
-  invoiceNo: string
+  invoiceNo: string 
   supplier: string | null
   total: number
   status: string
