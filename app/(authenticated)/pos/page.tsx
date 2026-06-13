@@ -82,6 +82,7 @@ export default function POSPage() {
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId)
   const customerName = selectedCustomer?.name || ''
   const customerId = selectedCustomerId || null
+  const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({})
 
   const saleData = {
     items: cart.map(item => ({
@@ -188,12 +189,23 @@ export default function POSPage() {
         unit: product.unit,
         vatCategory: product.vatCategory
       }])
+
+      setQuantityInputs(prev => ({
+        ...prev,
+        [product.id]: '1'
+      }))
     }
     toast.success(`Added ${product.name} to cart`)
   }
 
   const removeFromCart = (productId: string) => {
     setCart(cart.filter(item => item.productId !== productId))
+
+    setQuantityInputs(prev => {
+      const updated = { ...prev }
+      delete updated[productId]
+      return updated
+    })
   }
 
   const updateQuantity = (
@@ -206,33 +218,30 @@ export default function POSPage() {
 
     if (!product) return
 
-    // Check if it's a valid number
-    if (isNaN(newQuantity)) return
-
-    // Allow values > 0, including decimals
-    if (newQuantity > 0) {
-      if (newQuantity > product.quantity) {
-        toast.error(
-          `Only ${product.quantity.toFixed(decimalPlaces)} ${product.unit}(s) available`
-        )
-        return
-      }
-
-      // Round to configured decimal places
-      const rounded = Number(newQuantity.toFixed(decimalPlaces))
-
-      setCart(cart.map(item =>
-        item.productId === productId
-          ? {
-              ...item,
-              quantity: rounded
-            }
-          : item
-      ))
-    } else if (newQuantity <= 0) {
-      // Remove item if quantity is zero or negative
-      removeFromCart(productId)
+    if (newQuantity > product.quantity) {
+      toast.error(
+        `Only ${product.quantity} available`
+      )
+      return
     }
+
+    if (newQuantity <= 0) {
+      removeFromCart(productId)
+      return
+    }
+
+    const rounded = Number(
+      newQuantity.toFixed(decimalPlaces)
+    )
+
+    setCart(cart.map(item =>
+      item.productId === productId
+        ? {
+            ...item,
+            quantity: rounded
+          }
+        : item
+    ))
   }
 
   const handlePrintReceipt = () => {
@@ -423,93 +432,82 @@ export default function POSPage() {
               <p className="text-gray-500 dark:text-gray-400 text-center">Cart is empty</p>
             ) : (
               <div className="space-y-4">
-
-                {cart.map((item) => {
-                  const inputKey = `quantity_${item.productId}`
-                  
-                  return (
-                    <div key={item.productId} className="border-b dark:border-gray-700 pb-3">
-                      <div className="flex justify-between mb-2">
-                        <div>
-                          <span className="font-medium dark:text-white">{item.name}</span>
-                          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                            ({item.unit})
-                          </span>
-                          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
-                            item.vatCategory === 'VATABLE' 
-                              ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
-                          }`}>
-                            {item.vatCategory === 'VATABLE' ? `VAT ${vatPercentage}%` : 'No VAT'}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => removeFromCart(item.productId)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              let value = e.target.value
-                              
-                              // Allow empty string
-                              if (value === '') {
-                                return
-                              }
-                              
-                              if (value === '.') {
-                                return
-                              }
-                              
-                              if (!/^\d*\.?\d*$/.test(value)) {
-                                return
-                              }
-                              
-                              const numValue = parseFloat(value)
-                              
-                              if (!isNaN(numValue)) {
-                                const product = products.find(p => p.id === item.productId)
-                                if (product && numValue <= product.quantity) {
-                                  updateQuantity(item.productId, numValue)
-                                } else if (product && numValue > product.quantity) {
-                                  toast.error(`Only ${product.quantity} ${product.unit}(s) available`)
-                                }
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const value = e.target.value
-                              if (value === '' || value === '.') {
-                                removeFromCart(item.productId)
-                              } else {
-                                const numValue = parseFloat(value)
-                                if (!isNaN(numValue) && numValue > 0) {
-                                  const rounded = Number(numValue.toFixed(decimalPlaces))
-                                  updateQuantity(item.productId, rounded)
-                                } else if (numValue <= 0) {
-                                  removeFromCart(item.productId)
-                                }
-                              }
-                            }}
-                            className="w-24 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:text-white"
-                          />
-                          <span className="text-sm text-gray-500 dark:text-gray-400">
-                            {item.unit}
-                          </span>
-                        </div>
-                        <span className="font-semibold dark:text-white">
-                          {formatCurrency(item.price * item.quantity)}
+                {cart.map((item) => (
+                  <div key={item.productId} className="border-b dark:border-gray-700 pb-3">
+                    <div className="flex justify-between mb-2">
+                      <div>
+                        <span className="font-medium dark:text-white">{item.name}</span>
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                          ({item.unit})
+                        </span>
+                        <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                          item.vatCategory === 'VATABLE' 
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
+                        }`}>
+                          {item.vatCategory === 'VATABLE' ? `VAT ${vatPercentage}%` : 'No VAT'}
                         </span>
                       </div>
+                      <button
+                        onClick={() => removeFromCart(item.productId)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
                     </div>
-                  )
-                })}
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={
+                            quantityInputs[item.productId] ??
+                            item.quantity.toString()
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value
+
+                            if (!/^\d*\.?\d*$/.test(value)) return
+
+                            setQuantityInputs(prev => ({
+                              ...prev,
+                              [item.productId]: value
+                            }))
+                          }}
+                          onBlur={() => {
+                            const value =
+                              quantityInputs[item.productId] ??
+                              item.quantity.toString()
+
+                            const parsed = parseFloat(value)
+
+                            if (isNaN(parsed) || parsed <= 0) {
+                              setQuantityInputs(prev => ({
+                                ...prev,
+                                [item.productId]: item.quantity.toString()
+                              }))
+                              return
+                            }
+
+                            updateQuantity(item.productId, parsed)
+
+                            setQuantityInputs(prev => ({
+                              ...prev,
+                              [item.productId]: parsed.toFixed(decimalPlaces)
+                            }))
+                          }}
+                          className="w-24 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:text-white"
+                        />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.unit}
+                        </span>
+                      </div>
+                      <span className="font-semibold dark:text-white">
+                        {formatCurrency(item.price * item.quantity)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -697,7 +695,6 @@ export default function POSPage() {
                   <p className="text-gray-600 dark:text-gray-400">Stock Management System</p>
                 </div>
 
-                // In the receipt modal, update the customer display section:
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <p className="dark:text-gray-300"><strong>Receipt #:</strong> {lastSale.receiptNo}</p>
@@ -799,4 +796,4 @@ export default function POSPage() {
       `}</style>
     </div>
   )
-}
+}  
