@@ -68,7 +68,7 @@ model Product {
   cost        Float
   quantity    Float      @default(0)
   lowStockThreshold Int @default(5)
-  vatCategory  String   @default("VATABLE")
+  vatCategory  String   @default("NON_VATABLE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

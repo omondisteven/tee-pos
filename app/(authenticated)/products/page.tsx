@@ -54,7 +54,7 @@ export default function ProductsPage() {
     price: '',
     cost: '',
     lowStockThreshold: '5',
-    vatCategory: 'VATABLE',
+    vatCategory: 'NON_VATABLE',
     description: ''
   })
 
@@ -144,7 +144,7 @@ export default function ProductsPage() {
           price: '', 
           cost: '', 
           lowStockThreshold: '5', 
-          vatCategory: 'VATABLE', 
+          vatCategory: 'NON_VATABLE', 
           description: '' 
         })
         fetchProducts()
@@ -251,7 +251,7 @@ export default function ProductsPage() {
               price: '', 
               cost: '', 
               lowStockThreshold: '5', 
-              vatCategory: 'VATABLE', 
+              vatCategory: 'NON_VATABLE', 
               description: '' 
             })
             setShowModal(true)

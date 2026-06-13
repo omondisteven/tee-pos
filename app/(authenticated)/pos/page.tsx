@@ -713,6 +713,7 @@ export default function POSPage() {
                   <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Product</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Code</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Quantity</th>
                       <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Price</th>
@@ -724,6 +725,7 @@ export default function POSPage() {
                     {lastSale.items.map((item) => (
                       <tr key={item.id}>
                         <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.name}</td>
+                        <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.sku}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{item.quantity.toFixed(decimalPlaces)}</td>
                         <td className="px-4 py-2 text-sm text-center dark:text-gray-300">{item.product.unit || 'PCS'}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{formatCurrency(item.price)}</td>
@@ -736,32 +738,31 @@ export default function POSPage() {
                   </tbody>
                   <tfoot className="bg-gray-50 dark:bg-gray-700">
                     <tr className="border-t dark:border-gray-600">
-                      <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Subtotal:</td>
+                      <td colSpan={5} className="px-4 py-2 text-right font-bold dark:text-gray-300">Subtotal:</td>
                       <td className="px-4 py-2 text-right dark:text-gray-300">{formatCurrency(lastSale.subtotal)}</td>
                     </tr>
                     <tr className="border-t dark:border-gray-600">
-                      <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">VAT ({vatPercentage}% on vatable items):</td>
+                      <td colSpan={5} className="px-4 py-2 text-right font-bold dark:text-gray-300">VAT ({vatPercentage}% on vatable items):</td>
                       <td className="px-4 py-2 text-right dark:text-gray-300">{formatCurrency(lastSale.tax)}</td>
                     </tr>
                     <tr className="border-t dark:border-gray-600">
-                      <td colSpan={4} className="px-4 py-2 text-right text-lg font-bold dark:text-gray-300">Total:</td>
+                      <td colSpan={5} className="px-4 py-2 text-right text-lg font-bold dark:text-gray-300">Total:</td>
                       <td className="px-4 py-2 text-right text-lg font-bold dark:text-gray-300">{formatCurrency(lastSale.total)}</td>
                     </tr>
                     {lastSale.amountPaid !== undefined && lastSale.amountPaid > 0 && (
                       <>
                         <tr className="border-t dark:border-gray-600">
-                          <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Amount Paid:</td>
+                          <td colSpan={5} className="px-4 py-2 text-right font-bold dark:text-gray-300">Amount Paid:</td>
                           <td className="px-4 py-2 text-right text-green-600 dark:text-green-400">{formatCurrency(lastSale.amountPaid)}</td>
                         </tr>
                         <tr className="border-t dark:border-gray-600">
-                          <td colSpan={4} className="px-4 py-2 text-right font-bold dark:text-gray-300">Balance Due:</td>
+                          <td colSpan={5} className="px-4 py-2 text-right font-bold dark:text-gray-300">Balance Due:</td>
                           <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{formatCurrency(lastSale.balance || 0)}</td>
                         </tr>
                       </>
                     )}
                   </tfoot>
                 </table>
-
                 <div className="text-center text-sm text-gray-500 dark:text-gray-400 mt-8">
                   <p>Thank you for your business!</p>
                   <p>VAT is charged at {vatPercentage}% on vatable items only.</p>
