@@ -390,19 +390,29 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                 ) : (
                   items.map((item, index) => (
                     <tr key={index} className="hover:bg-gray-50">
+                      {/* Product Name */}
                       <td className="px-4 py-2">{item.productName}</td>
+                      
+                      {/* SKU */}
                       <td className="px-4 py-2">{item.productSku}</td>
-                      <td className="px-4 py-2">{item.productUnit}</td> 
+                      
+                      {/* Quantity with unit display */}
                       <td className="px-4 py-2">
-                        <input
-                          type="number"
-                          value={item.quantity.toFixed(decimalPlaces)}
-                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                          className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          min="1"
-                          disabled={loading}
-                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={item.quantity.toFixed(decimalPlaces)}
+                            onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
+                            className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            min="0.01"
+                            disabled={loading}
+                          />
+                          <span className="text-xs text-gray-500">{item.productUnit}</span>
+                        </div>
                       </td>
+                      
+                      {/* Cost Price */}
                       <td className="px-4 py-2">
                         <input
                           type="number"
@@ -413,7 +423,11 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                           disabled={loading}
                         />
                       </td>
+                      
+                      {/* Total */}
                       <td className="px-4 py-2 font-medium">${item.total.toFixed(2)}</td>
+                      
+                      {/* Actions */}
                       <td className="px-4 py-2">
                         <button
                           type="button"
