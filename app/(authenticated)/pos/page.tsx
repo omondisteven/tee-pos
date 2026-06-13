@@ -196,38 +196,61 @@ export default function POSPage() {
     setCart(cart.filter(item => item.productId !== productId))
   }
 
+  // Add a new state to track quantity input values temporarily
+const [quantityInputs, setQuantityInputs] = useState<Record<string, string>>({})
+
+// Update the updateQuantity function to handle string input
+const handleQuantityChange = (productId: string, inputValue: string) => {
+  // Store the raw input value
+  setQuantityInputs(prev => ({ ...prev, [productId]: inputValue }))
+  
+  // If input is empty, just store empty string
+  if (inputValue === '' || inputValue === '.') {
+    return
+  }
+  
+  // Parse the value
+  const parsed = parseFloat(inputValue)
+  if (isNaN(parsed)) return
+  
+  // Update the quantity
+  updateQuantity(productId, parsed)
+}
+
+// Modify the updateQuantity to work better with decimals
   const updateQuantity = (
     productId: string,
     newQuantity: number
   ) => {
-    const product = products.find(
-      p => p.id === productId
-    )
-
+    const product = products.find(p => p.id === productId)
     if (!product) return
 
+    // Check stock limit
     if (newQuantity > product.quantity) {
-      toast.error(
-        `Only ${product.quantity} available`
-      )
+      toast.error(`Only ${product.quantity} ${product.unit}(s) available`)
+      // Reset the input to the current cart quantity
+      const currentItem = cart.find(item => item.productId === productId)
+      if (currentItem) {
+        setQuantityInputs(prev => ({ 
+          ...prev, 
+          [productId]: currentItem.quantity.toString() 
+        }))
+      }
       return
     }
 
+    // Remove if quantity is 0 or negative
     if (newQuantity <= 0) {
       removeFromCart(productId)
       return
     }
 
-    const rounded = Number(
-      newQuantity.toFixed(decimalPlaces)
-    )
+    // Round to decimal places
+    const rounded = Number(newQuantity.toFixed(decimalPlaces))
 
     setCart(cart.map(item =>
       item.productId === productId
-        ? {
-            ...item,
-            quantity: rounded
-          }
+        ? { ...item, quantity: rounded }
         : item
     ))
   }
@@ -446,16 +469,30 @@ export default function POSPage() {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
                         <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateQuantity(
-                              item.productId,
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
+                          type="text"
+                          inputMode="decimal"
+                          value={quantityInputs[item.productId] !== undefined ? quantityInputs[item.productId] : item.quantity.toString()}
+                          onChange={(e) => handleQuantityChange(item.productId, e.target.value)}
+                          onBlur={(e) => {
+                            // On blur, format the value properly
+                            const value = e.target.value
+                            if (value === '' || value === '.') {
+                              // If empty or just decimal, revert to 0 and remove item
+                              removeFromCart(item.productId)
+                              setQuantityInputs(prev => {
+                                const newState = { ...prev }
+                                delete newState[item.productId]
+                                return newState
+                              })
+                            } else {
+                              const num = parseFloat(value)
+                              if (!isNaN(num) && num > 0) {
+                                const formatted = num.toFixed(decimalPlaces)
+                                setQuantityInputs(prev => ({ ...prev, [item.productId]: formatted }))
+                                updateQuantity(item.productId, num)
+                              }
+                            }
+                          }}
                           className="w-24 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:text-white"
                         />
                         <span className="text-sm text-gray-500 dark:text-gray-400">
