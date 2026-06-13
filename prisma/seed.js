@@ -34,16 +34,101 @@ async function main() {
     })
     console.log(`✅ Admin user created: ${adminUser.email} (ID: ${adminUser.id})`)
 
-    // Create sample products
+    // Create sample products with units
     console.log('Creating sample products...')
     const products = [
-  { name: 'Laptop', sku: 'LAP001', price: 999.99, cost: 700.00, quantity: 10, lowStockThreshold: 3, vatCategory: 'VATABLE' },
-  { name: 'Mouse', sku: 'MOU001', price: 29.99, cost: 15.00, quantity: 50, lowStockThreshold: 10, vatCategory: 'VATABLE' },
-  { name: 'Keyboard', sku: 'KEY001', price: 79.99, cost: 40.00, quantity: 25, lowStockThreshold: 5, vatCategory: 'VATABLE' },
-  { name: 'Monitor', sku: 'MON001', price: 299.99, cost: 200.00, quantity: 8, lowStockThreshold: 2, vatCategory: 'VATABLE' },
-  { name: 'USB Cable', sku: 'USB001', price: 9.99, cost: 3.00, quantity: 100, lowStockThreshold: 20, vatCategory: 'NON_VATABLE' },
-  { name: 'Headphones', sku: 'HEAD001', price: 149.99, cost: 80.00, quantity: 15, lowStockThreshold: 5, vatCategory: 'VATABLE' },
-]
+      { 
+        name: 'Laptop', 
+        sku: 'LAP001', 
+        unit: 'PCS',  // Add unit
+        price: 999.99, 
+        cost: 700.00, 
+        quantity: 10, 
+        lowStockThreshold: 3, 
+        vatCategory: 'VATABLE' 
+      },
+      { 
+        name: 'Mouse', 
+        sku: 'MOU001', 
+        unit: 'PCS',  // Add unit
+        price: 29.99, 
+        cost: 15.00, 
+        quantity: 50, 
+        lowStockThreshold: 10, 
+        vatCategory: 'VATABLE' 
+      },
+      { 
+        name: 'Keyboard', 
+        sku: 'KEY001', 
+        unit: 'PCS',  // Add unit
+        price: 79.99, 
+        cost: 40.00, 
+        quantity: 25, 
+        lowStockThreshold: 5, 
+        vatCategory: 'VATABLE' 
+      },
+      { 
+        name: 'Monitor', 
+        sku: 'MON001', 
+        unit: 'PCS',  // Add unit
+        price: 299.99, 
+        cost: 200.00, 
+        quantity: 8, 
+        lowStockThreshold: 2, 
+        vatCategory: 'VATABLE' 
+      },
+      { 
+        name: 'USB Cable', 
+        sku: 'USB001', 
+        unit: 'PCS',  // Add unit
+        price: 9.99, 
+        cost: 3.00, 
+        quantity: 100, 
+        lowStockThreshold: 20, 
+        vatCategory: 'NON_VATABLE' 
+      },
+      { 
+        name: 'Headphones', 
+        sku: 'HEAD001', 
+        unit: 'PCS',  // Add unit
+        price: 149.99, 
+        cost: 80.00, 
+        quantity: 15, 
+        lowStockThreshold: 5, 
+        vatCategory: 'VATABLE' 
+      },
+      // Add some products with different units
+      { 
+        name: 'Rice', 
+        sku: 'RIC001', 
+        unit: 'KGS',  // Kilograms
+        price: 2.99, 
+        cost: 1.50, 
+        quantity: 100, 
+        lowStockThreshold: 20, 
+        vatCategory: 'NON_VATABLE' 
+      },
+      { 
+        name: 'Cooking Oil', 
+        sku: 'OIL001', 
+        unit: 'LTR',  // Liters
+        price: 5.99, 
+        cost: 3.50, 
+        quantity: 50, 
+        lowStockThreshold: 10, 
+        vatCategory: 'VATABLE' 
+      },
+      { 
+        name: 'Fabric', 
+        sku: 'FAB001', 
+        unit: 'MTR',  // Meters
+        price: 8.99, 
+        cost: 5.00, 
+        quantity: 200, 
+        lowStockThreshold: 30, 
+        vatCategory: 'VATABLE' 
+      }
+    ]
 
     const createdProducts = []
     for (const product of products) {
@@ -51,7 +136,7 @@ async function main() {
         data: product
       })
       createdProducts.push(created)
-      console.log(`✅ Product created: ${created.name} (SKU: ${created.sku})`)
+      console.log(`✅ Product created: ${created.name} (SKU: ${created.sku}, Unit: ${created.unit})`)
     }
 
     // Create a sample purchase
@@ -106,11 +191,13 @@ async function main() {
       const sale = await prisma.sale.create({
         data: {
           receiptNo: `SALE-SAMPLE-${Date.now()}`,
-          customer: 'John Doe',
+          customerName: 'John Doe',
           subtotal: keyboard.price + monitor.price,
           tax: (keyboard.price + monitor.price) * 0.1,
           total: (keyboard.price + monitor.price) * 1.1,
+          amountPaid: (keyboard.price + monitor.price) * 1.1,
           paymentMethod: 'CARD',
+          paymentStatus: 'PAID',
           userId: adminUser.id,
           items: {
             create: [

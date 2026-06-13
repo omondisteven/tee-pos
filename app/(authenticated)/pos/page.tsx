@@ -11,6 +11,7 @@ interface Product {
   sku: string
   price: number
   quantity: number
+  unit: string
   vatCategory: string
 }
 
@@ -20,6 +21,7 @@ interface CartItem {
   sku: string
   price: number
   quantity: number
+  unit: string
   vatCategory: string
 }
 
@@ -46,6 +48,7 @@ interface SaleData {
       name: string
       sku: string
       vatCategory: string
+      unit: string
     }
   }>
   user: {
@@ -182,6 +185,7 @@ export default function POSPage() {
         sku: product.sku,
         price: product.price,
         quantity: 1,
+        unit: product.unit,
         vatCategory: product.vatCategory
       }])
     }
@@ -386,7 +390,7 @@ export default function POSPage() {
                   }`}
                 >
                   <h3 className="font-semibold dark:text-white">{product.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">SKU: {product.sku}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">SKU: {product.sku} | Unit: {product.unit} | Unit: {product.unit}</p>
                   <p className="text-lg font-bold text-blue-600 dark:text-blue-400 mt-2">{formatCurrency(product.price)}</p>
                   <div className="flex justify-between items-center mt-1">
                     <span className={`text-xs px-2 py-0.5 rounded ${
@@ -421,6 +425,9 @@ export default function POSPage() {
                     <div className="flex justify-between mb-2">
                       <div>
                         <span className="font-medium dark:text-white">{item.name}</span>
+                        <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                          ({item.unit})
+                        </span>
                         <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
                           item.vatCategory === 'VATABLE' 
                             ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200' 
@@ -451,6 +458,9 @@ export default function POSPage() {
                           }
                           className="w-24 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:text-white"
                         />
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {item.unit}
+                        </span>
                       </div>
                       <span className="font-semibold dark:text-white">
                         {formatCurrency(item.price * item.quantity)}
@@ -666,6 +676,7 @@ export default function POSPage() {
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Product</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Quantity</th>
+                      <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Unit</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Price</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">VAT</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
@@ -676,6 +687,7 @@ export default function POSPage() {
                       <tr key={item.id}>
                         <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.name}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{item.quantity.toFixed(decimalPlaces)}</td>
+                        <td className="px-4 py-2 text-sm text-center dark:text-gray-300">{item.product.unit || 'PCS'}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{formatCurrency(item.price)}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">
                           {item.product.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}
