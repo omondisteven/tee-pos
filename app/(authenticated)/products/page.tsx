@@ -1,3 +1,4 @@
+// app/(authenticated)/products/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -5,16 +6,36 @@ import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
 import CompactTable from '@/components/UI/CompactTable'
 
+// Define the UnitOfMeasure type to match the enum
+type UnitOfMeasure = 'PCS' | 'KGS' | 'GMS' | 'LTR' | 'MLS' | 'MTR' | 'BOX' | 'DOZ' | 'PAIR' | 'SET' | 'ROLL' | 'PKT'
+
 interface Product {
   id: string
   name: string
   sku: string
+  unit: UnitOfMeasure
   price: number
   cost: number
   quantity: number
   lowStockThreshold: number
   vatCategory: string
   description?: string
+}
+
+// Unit display names for better readability
+const unitDisplayNames: Record<UnitOfMeasure, string> = {
+  PCS: 'Pieces',
+  KGS: 'Kilograms',
+  GMS: 'Grams',
+  LTR: 'Liters',
+  MLS: 'Milliliters',
+  MTR: 'Meters',
+  BOX: 'Box',
+  DOZ: 'Dozen',
+  PAIR: 'Pair',
+  SET: 'Set',
+  ROLL: 'Roll',
+  PKT: 'Packet'
 }
 
 export default function ProductsPage() {
@@ -29,6 +50,7 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
+    unit: 'PCS' as UnitOfMeasure,
     price: '',
     cost: '',
     lowStockThreshold: '5',
@@ -79,10 +101,6 @@ export default function ProductsPage() {
     setFilteredProducts(filtered)
   }
 
-  const isLowStock = (product: Product) => {
-    return product.quantity <= product.lowStockThreshold
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
@@ -90,27 +108,45 @@ export default function ProductsPage() {
       const url = editingProduct ? `/api/products/${editingProduct.id}` : '/api/products'
       const method = editingProduct ? 'PUT' : 'POST'
       
+      const submitData = {
+        name: formData.name,
+        sku: formData.sku,
+        unit: formData.unit,
+        price: parseFloat(formData.price),
+        cost: parseFloat(formData.cost),
+        lowStockThreshold: parseInt(formData.lowStockThreshold),
+        vatCategory: formData.vatCategory,
+        description: formData.description
+      }
+
+      // Only include quantity for new products
+      if (!editingProduct) {
+        Object.assign(submitData, { quantity: 0 })
+      }
+
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          ...formData,
-          price: parseFloat(formData.price),
-          cost: parseFloat(formData.cost),
-          lowStockThreshold: parseInt(formData.lowStockThreshold),
-          quantity: editingProduct ? undefined : 0, // Don't send quantity for edit
-          vatCategory: formData.vatCategory
-        })
+        body: JSON.stringify(submitData)
       })
 
       if (res.ok) {
         toast.success(editingProduct ? 'Product updated' : 'Product created')
         setShowModal(false)
         setEditingProduct(null)
-        setFormData({ name: '', sku: '', price: '', cost: '', lowStockThreshold: '5', vatCategory: 'VATABLE', description: '' })
+        setFormData({ 
+          name: '', 
+          sku: '', 
+          unit: 'PCS', 
+          price: '', 
+          cost: '', 
+          lowStockThreshold: '5', 
+          vatCategory: 'VATABLE', 
+          description: '' 
+        })
         fetchProducts()
       } else {
         const error = await res.json()
@@ -149,6 +185,12 @@ export default function ProductsPage() {
   const productColumns = [
     { key: 'name', header: 'Name', align: 'left' as const },
     { key: 'sku', header: 'SKU', align: 'left' as const },
+    { 
+      key: 'unit', 
+      header: 'Unit', 
+      align: 'center' as const,
+      render: (value: UnitOfMeasure) => unitDisplayNames[value] || value
+    },
     { key: 'price', header: 'Price', align: 'right' as const, render: (value: number) => formatCurrency(value) },
     { key: 'cost', header: 'Cost', align: 'right' as const, render: (value: number) => formatCurrency(value) },
     { key: 'quantity', header: 'Stock', align: 'right' as const, render: (value: number, row: any) => (
@@ -172,6 +214,7 @@ export default function ProductsPage() {
             setFormData({
               name: row.name,
               sku: row.sku,
+              unit: row.unit,
               price: row.price.toString(),
               cost: row.cost.toString(),
               lowStockThreshold: row.lowStockThreshold.toString(),
@@ -201,7 +244,16 @@ export default function ProductsPage() {
         <button
           onClick={() => {
             setEditingProduct(null)
-            setFormData({ name: '', sku: '', price: '', cost: '', lowStockThreshold: '5', vatCategory: 'VATABLE', description: '' })
+            setFormData({ 
+              name: '', 
+              sku: '', 
+              unit: 'PCS', 
+              price: '', 
+              cost: '', 
+              lowStockThreshold: '5', 
+              vatCategory: 'VATABLE', 
+              description: '' 
+            })
             setShowModal(true)
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -241,7 +293,7 @@ export default function ProductsPage() {
       {/* Products Table */}
       <CompactTable columns={productColumns} data={filteredProducts} />
 
-      {/* Modal - Keep existing modal code but add dark mode classes */}
+      {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
@@ -264,6 +316,33 @@ export default function ProductsPage() {
                   className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
                   required
                 />
+                
+                {/* Unit Selection Field */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Unit of Measure *
+                  </label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value as UnitOfMeasure })}
+                    className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="PCS">Pieces (PCS)</option>
+                    <option value="KGS">Kilograms (KGS)</option>
+                    <option value="GMS">Grams (GMS)</option>
+                    <option value="LTR">Liters (LTR)</option>
+                    <option value="MLS">Milliliters (MLS)</option>
+                    <option value="MTR">Meters (MTR)</option>
+                    <option value="BOX">Box (BOX)</option>
+                    <option value="DOZ">Dozen (DOZ)</option>
+                    <option value="PAIR">Pair (PAIR)</option>
+                    <option value="SET">Set (SET)</option>
+                    <option value="ROLL">Roll (ROLL)</option>
+                    <option value="PKT">Packet (PKT)</option>
+                  </select>
+                </div>
+
                 <input
                   type="number"
                   step="0.01"

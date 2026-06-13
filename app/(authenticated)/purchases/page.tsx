@@ -21,7 +21,7 @@ interface Purchase {
     quantity: number
     price: number
     total: number
-    product: { name: string; sku: string }
+    product: { name: string; sku: string; unit: string } 
   }>
 }
 

@@ -1,3 +1,4 @@
+// components\Purchases\PurchaseDetailsModal.tsx
 'use client'
 
 import { useRef } from 'react'
@@ -10,6 +11,7 @@ interface PurchaseItem {
   product: {
     name: string
     sku: string
+    unit: string
   }
 }
 
@@ -34,6 +36,7 @@ interface PurchaseDetailsModalProps {
 
 export default function PurchaseDetailsModal({ isOpen, onClose, purchase }: PurchaseDetailsModalProps) {
   const printRef = useRef<HTMLDivElement>(null)
+  const decimalPlaces = 2 // Set the number of decimal places for quantities
 
   if (!isOpen || !purchase) return null
 
@@ -105,6 +108,7 @@ export default function PurchaseDetailsModal({ isOpen, onClose, purchase }: Purc
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Unit Cost</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
                     </tr>
@@ -114,7 +118,8 @@ export default function PurchaseDetailsModal({ isOpen, onClose, purchase }: Purc
                       <tr key={item.id}>
                         <td className="px-4 py-2">{item.product?.name || 'Unknown'}</td>
                         <td className="px-4 py-2">{item.product?.sku || 'N/A'}</td>
-                        <td className="px-4 py-2 text-right">{item.quantity}</td>
+                        <td className="px-4 py-2 text-right">{item.quantity.toFixed(decimalPlaces)}</td>
+                        <td className="px-4 py-2">{item.product?.unit || 'PCS'}</td>
                         <td className="px-4 py-2 text-right">${item.price?.toFixed(2) || '0.00'}</td>
                         <td className="px-4 py-2 text-right">${item.total?.toFixed(2) || '0.00'}</td>
                       </tr>

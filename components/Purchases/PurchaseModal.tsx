@@ -1,3 +1,4 @@
+// components/Purchases/PurchaseModal.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -7,6 +8,7 @@ interface Product {
   id: string
   name: string
   sku: string
+  unit: string  // Add this
   price: number
   cost: number
   quantity: number
@@ -17,6 +19,7 @@ interface PurchaseItem {
   productId: string
   productName: string
   productSku: string
+  productUnit: string  // Add this
   quantity: number
   cost: number
   total: number
@@ -39,6 +42,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const decimalPlaces = 2;
 
   useEffect(() => {
     if (isOpen) {
@@ -91,6 +95,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
         productName: item.product.name,
         productSku: item.product.sku,
         quantity: item.quantity,
+        productUnit: item.product.unit,
         cost: item.price,
         total: item.total
       }))
@@ -126,6 +131,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       productSku: selectedProduct.sku,
+      productUnit: selectedProduct.unit, 
       quantity: 1,
       cost: selectedProduct.cost,
       total: selectedProduct.cost
@@ -331,7 +337,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                         >
                           <div className="font-medium text-gray-900">{product.name}</div>
                           <div className="text-sm text-gray-500">
-                            SKU: {product.sku} | Cost: ${product.cost.toFixed(2)} | Stock: {product.quantity}
+                            SKU: {product.sku} | Cost: ${product.cost.toFixed(2)} | Stock: {product.quantity.toFixed(decimalPlaces)}
                           </div>
                         </div>
                       ))
@@ -386,10 +392,11 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-4 py-2">{item.productName}</td>
                       <td className="px-4 py-2">{item.productSku}</td>
+                      <td className="px-4 py-2">{item.productUnit}</td> 
                       <td className="px-4 py-2">
                         <input
                           type="number"
-                          value={item.quantity}
+                          value={item.quantity.toFixed(decimalPlaces)}
                           onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
                           className="w-20 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="1"

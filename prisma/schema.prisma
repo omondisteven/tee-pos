@@ -1,3 +1,4 @@
+//prisma\schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -43,6 +44,21 @@ model Customer {
   @@index([status])
 }
 
+enum UnitOfMeasure {
+  PCS   // Pieces
+  KGS   // Kilograms
+  GMS  //grams
+  LTR   // Liters
+  MLS   // Mililitres
+  MTR   // Meters
+  BOX   // Box
+  DOZ   // Dozen
+  PAIR  // Pair
+  SET   // Set
+  ROLL  // Roll
+  PKT   // Packet
+}
+
 model Product {
   id          String   @id @default(cuid())
   name        String
@@ -50,11 +66,13 @@ model Product {
   sku         String   @unique
   price       Float
   cost        Float
-  quantity    Int      @default(0)
+  quantity    Float      @default(0)
   lowStockThreshold Int @default(5)
   vatCategory  String   @default("VATABLE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  unit        UnitOfMeasure @default(PCS) 
   
   purchaseItems PurchaseItem[]
   saleItems     SaleItem[]
@@ -84,7 +102,8 @@ model Purchase {
 
 model PurchaseItem {
   id         String   @id @default(cuid())
-  quantity   Int
+  quantity   Float
+  unit String?
   price      Float
   total      Float
   productId  String
@@ -128,7 +147,7 @@ model Sale {
 
 model SaleItem {
   id         String   @id @default(cuid())
-  quantity   Int
+  quantity   Float
   price      Float
   total      Float
   productId  String

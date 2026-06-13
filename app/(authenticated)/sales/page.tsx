@@ -63,6 +63,7 @@ export default function SalesPage() {
   const [cancellingSaleId, setCancellingSaleId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'receipts' | 'items'>('receipts')
   const printRef = useRef<HTMLDivElement>(null)
+  const decimalPlaces = 2 // Set the number of decimal places for quantities
 
   useEffect(() => {
     fetchSales()
@@ -408,7 +409,7 @@ export default function SalesPage() {
                     <td className="px-4 py-2">{item.receiptNo}</td>
                     <td className="px-4 py-2">{item.productName}</td>
                     <td className="px-4 py-2">{item.productSku}</td>
-                    <td className="px-4 py-2 text-right">{item.quantity}</td>
+                    <td className="px-4 py-2 text-right">{item.quantity.toFixed(decimalPlaces)}</td>
                     <td className="px-4 py-2 text-right">{formatCurrency(item.price)}</td>
                     <td className="px-4 py-2 text-right">{formatCurrency(item.total)}</td>
                   </tr>
@@ -532,7 +533,7 @@ export default function SalesPage() {
                         {item.productSku}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
-                        {item.quantity}
+                        {item.quantity.toFixed(decimalPlaces)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-600 dark:text-gray-400">
                         {formatCurrency(item.price)}
@@ -586,7 +587,7 @@ export default function SalesPage() {
                   {selectedSale.items.map((item) => (
                     <tr key={item.id}>
                       <td className="px-4 py-2">{item.product.name}</td>
-                      <td className="px-4 py-2 text-right">{item.quantity}</td>
+                      <td className="px-4 py-2 text-right">{item.quantity.toFixed(decimalPlaces)}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(item.price)}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(item.total)}</td>
                     </tr>

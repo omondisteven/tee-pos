@@ -1,3 +1,4 @@
+// app\(authenticated)\pos\page.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -157,7 +158,7 @@ export default function POSPage() {
   }
 
   const addToCart = (product: Product) => {
-    if (product.quantity === 0) {
+    if (product.quantity <= 0) {
       toast.error(`${product.name} is out of stock!`)
       return
     }
@@ -191,24 +192,40 @@ export default function POSPage() {
     setCart(cart.filter(item => item.productId !== productId))
   }
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
-    const product = products.find(p => p.id === productId)
+  const updateQuantity = (
+    productId: string,
+    newQuantity: number
+  ) => {
+    const product = products.find(
+      p => p.id === productId
+    )
+
     if (!product) return
 
     if (newQuantity > product.quantity) {
-      toast.error(`Only ${product.quantity} items available`)
+      toast.error(
+        `Only ${product.quantity} available`
+      )
       return
     }
 
     if (newQuantity <= 0) {
       removeFromCart(productId)
-    } else {
-      setCart(cart.map(item =>
-        item.productId === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      ))
+      return
     }
+
+    const rounded = Number(
+      newQuantity.toFixed(decimalPlaces)
+    )
+
+    setCart(cart.map(item =>
+      item.productId === productId
+        ? {
+            ...item,
+            quantity: rounded
+          }
+        : item
+    ))
   }
 
   const handlePrintReceipt = () => {
@@ -380,7 +397,7 @@ export default function POSPage() {
                       {product.vatCategory === 'VATABLE' ? `VAT ${vatPercentage}%` : 'No VAT'}
                     </span>
                     <p className={`text-sm ${product.quantity < 5 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                      Stock: {product.quantity}
+                      Stock: {product.quantity.toFixed(decimalPlaces)}
                     </p>
                   </div>
                 </div>
@@ -421,19 +438,19 @@ export default function POSPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-                        >
-                          -
-                        </button>
-                        <span className="w-12 text-center dark:text-white">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          className="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-                        >
-                          +
-                        </button>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={item.quantity}
+                          onChange={(e) =>
+                            updateQuantity(
+                              item.productId,
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                          className="w-24 px-2 py-1 border rounded text-center dark:bg-gray-700 dark:text-white"
+                        />
                       </div>
                       <span className="font-semibold dark:text-white">
                         {formatCurrency(item.price * item.quantity)}
@@ -658,7 +675,7 @@ export default function POSPage() {
                     {lastSale.items.map((item) => (
                       <tr key={item.id}>
                         <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.name}</td>
-                        <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{item.quantity}</td>
+                        <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{item.quantity.toFixed(decimalPlaces)}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{formatCurrency(item.price)}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">
                           {item.product.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}

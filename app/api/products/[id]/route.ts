@@ -1,3 +1,4 @@
+// app/api/products/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthenticatedUser } from '@/lib/auth'
@@ -14,7 +15,7 @@ export async function PUT(
 
     const { id } = await params
     const body = await req.json()
-    const { name, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
+    const { name, unit, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
 
     // Get current product to preserve quantity if not provided
     const currentProduct = await prisma.product.findUnique({
@@ -28,22 +29,27 @@ export async function PUT(
       )
     }
 
-    // Use existing quantity if new quantity is not provided or is 0
-    const newQuantity = quantity !== undefined && quantity !== null && quantity !== 0 
-      ? parseInt(quantity) 
-      : currentProduct.quantity
+    // Prepare update data
+    const updateData: any = {
+      name: name !== undefined ? name : currentProduct.name,
+      unit: unit !== undefined ? unit : currentProduct.unit,
+      price: price !== undefined ? parseFloat(price) : currentProduct.price,
+      cost: cost !== undefined ? parseFloat(cost) : currentProduct.cost,
+      lowStockThreshold: lowStockThreshold !== undefined ? parseInt(lowStockThreshold) : currentProduct.lowStockThreshold,
+      vatCategory: vatCategory || currentProduct.vatCategory,
+      description: description !== undefined ? description : currentProduct.description
+    }
+
+    // Only update quantity if explicitly provided and not 0
+    if (quantity !== undefined && quantity !== null && quantity !== 0) {
+      updateData.quantity = parseFloat(quantity)
+    } else {
+      updateData.quantity = currentProduct.quantity
+    }
 
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        name,
-        price: parseFloat(price),
-        cost: parseFloat(cost),
-        quantity: newQuantity,
-        lowStockThreshold: parseInt(lowStockThreshold),
-        vatCategory: vatCategory || currentProduct.vatCategory,
-        description
-      }
+      data: updateData
     })
 
     return NextResponse.json(product)

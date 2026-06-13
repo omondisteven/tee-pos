@@ -1,21 +1,8 @@
+// app/api/products/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getAuthenticatedUser } from '@/lib/auth'
-
-// Define the Product type
-interface Product {
-  id: string
-  name: string
-  sku: string
-  price: number
-  cost: number
-  quantity: number
-  lowStockThreshold: number
-  vatCategory: string
-  description: string | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { UnitOfMeasure } from '@prisma/client' // Import the enum from Prisma
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,9 +32,9 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Apply low stock filter in JavaScript with proper typing
+    // Apply low stock filter
     if (lowStock) {
-      products = products.filter((product: Product) => product.quantity <= product.lowStockThreshold)
+      products = products.filter((product) => product.quantity <= product.lowStockThreshold)
     }
 
     // Apply pagination
@@ -80,15 +67,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, sku, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
+    const { name, sku, unit, price, cost, quantity, lowStockThreshold, vatCategory, description } = body
 
+    // Validate required fields
     if (!name || !sku || !price || !cost) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: name, sku, price, and cost are required' },
         { status: 400 }
       )
     }
 
+    // Check if product with same SKU exists
     const existingProduct = await prisma.product.findUnique({
       where: { sku }
     })
@@ -100,16 +89,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Validate unit is a valid enum value
+    let validUnit: UnitOfMeasure = UnitOfMeasure.PCS
+    if (unit && Object.values(UnitOfMeasure).includes(unit as UnitOfMeasure)) {
+      validUnit = unit as UnitOfMeasure
+    }
+
+    // Create product
     const product = await prisma.product.create({
       data: {
         name,
         sku,
+        unit: validUnit,
         price: parseFloat(price),
         cost: parseFloat(cost),
-        quantity: parseInt(quantity) || 0,
-        lowStockThreshold: parseInt(lowStockThreshold) || 5,
+        quantity: quantity ? parseFloat(quantity) : 0,
+        lowStockThreshold: lowStockThreshold ? parseInt(lowStockThreshold) : 5,
         vatCategory: vatCategory || 'VATABLE',
-        description
+        description: description || null
       }
     })
 
