@@ -445,7 +445,6 @@ export default function POSPage() {
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
-                        // Keep the existing cart rendering but modify the input
                         <input
                           type="number"
                           step={`0.${'0'.repeat(decimalPlaces - 1)}1`}
@@ -453,7 +452,6 @@ export default function POSPage() {
                           value={item.quantity}
                           onChange={(e) => {
                             const rawValue = e.target.value
-                            // Allow empty string and decimal point during typing
                             if (rawValue === '' || rawValue === '.') {
                               return
                             }
@@ -465,7 +463,6 @@ export default function POSPage() {
                           onBlur={(e) => {
                             const value = e.target.value
                             if (value === '' || value === '.') {
-                              // If user leaves empty or just decimal, remove item
                               removeFromCart(item.productId)
                             } else {
                               const num = parseFloat(value)
