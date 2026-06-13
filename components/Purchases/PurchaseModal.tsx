@@ -400,12 +400,51 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           <input
-                            type="number"
-                            step="0.01"
+                            type="text"
+                            inputMode="decimal"
                             value={item.quantity.toFixed(decimalPlaces)}
-                            onChange={(e) => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                            className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            min="0.01"
+                            onChange={(e) => {
+                              let value = e.target.value
+                              
+                              // Allow empty string
+                              if (value === '') {
+                                return
+                              }
+                              
+                              // Allow decimal point alone (user might be typing "0.")
+                              if (value === '.') {
+                                return
+                              }
+                              
+                              // Allow numbers and single decimal point
+                              if (!/^\d*\.?\d*$/.test(value)) {
+                                return
+                              }
+                              
+                              // Parse the value
+                              const numValue = parseFloat(value)
+                              
+                              // Only update if it's a valid number
+                              if (!isNaN(numValue)) {
+                                updateItem(index, 'quantity', numValue)
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value
+                              if (value === '' || value === '.') {
+                                updateItem(index, 'quantity', 0)
+                              } else {
+                                const numValue = parseFloat(value)
+                                if (!isNaN(numValue) && numValue > 0) {
+                                  // Round to decimal places
+                                  const rounded = Number(numValue.toFixed(decimalPlaces))
+                                  updateItem(index, 'quantity', rounded)
+                                } else if (numValue <= 0) {
+                                  updateItem(index, 'quantity', 0)
+                                }
+                              }
+                            }}
+                            className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
                             disabled={loading}
                           />
                           <span className="text-xs text-gray-500">{item.productUnit}</span>
@@ -419,16 +458,16 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                           step="0.01"
                           value={item.cost}
                           onChange={(e) => updateItem(index, 'cost', parseFloat(e.target.value) || 0)}
-                          className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
                           disabled={loading}
                         />
                       </td>
                       
                       {/* Total */}
-                      <td className="px-4 py-2 font-medium">${item.total.toFixed(2)}</td>
+                      <td className="px-4 py-2 font-medium text-right">${item.total.toFixed(2)}</td>
                       
                       {/* Actions */}
-                      <td className="px-4 py-2">
+                      <td className="px-4 py-2 text-center">
                         <button
                           type="button"
                           onClick={() => removeItem(index)}
