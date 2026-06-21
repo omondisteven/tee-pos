@@ -117,13 +117,13 @@ function LoginForm() {
           <p>Password: admin123</p>
         </div>
 
-        <div className="text-center">
+        {/* <div className="text-center">
           <Link href="/register" className="text-sm text-blue-600 hover:text-blue-500">
             Don't have an account? Register
           </Link>
-        </div>
+        </div> */}
         {/* Footer inside the component */}
-        <div className="mt-8 text-center text-[10px] text-gray-400">
+        <div className="mt-8 text-center text-[10px] text-blue-600">
           <p>© 2026 TEEVOS SOLUTIONS | 254 722 748262</p>
         </div>
       </div>      
