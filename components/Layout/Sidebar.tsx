@@ -74,9 +74,6 @@ export default function Sidebar() {
     }
   }, [pathname])
 
-  // REMOVED: The auto-close on navigation was causing the sidebar to close immediately
-  // Now the sidebar stays open until explicitly closed
-
   const isActive = (href: string) => {
     return pathname === href || pathname?.startsWith(href + '/')
   }
@@ -101,13 +98,30 @@ export default function Sidebar() {
     setExpandedGarageReports(!expandedGarageReports)
   }
 
+  // Get filtered reports based on user role
+  const getFilteredShopReports = () => {
+    if (userRole === 'ADMIN') {
+      return shopReports
+    }
+    // For non-admin users, only show Debtors report, hide Profit & Loss
+    return shopReports.filter(report => report.name !== 'Profit & Loss')
+  }
+
+  const getFilteredGarageReports = () => {
+    if (userRole === 'ADMIN') {
+      return garageReports
+    }
+    // For non-admin users, only show Debtors report, hide Profit & Loss
+    return garageReports.filter(report => report.name !== 'Profit & Loss')
+  }
+
   const userNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: '📊' },
     { name: 'Settings', href: '/settings', icon: '⚙️' },
   ]
 
   if (userRole === 'ADMIN') {
-    userNavigation.splice(1, 0, { name: 'Users', href: '/users', icon: '👤' })
+    userNavigation.splice(1, 0, { name: 'User Management', href: '/users', icon: '👤' })
   }
 
   const sidebarContent = (
@@ -133,7 +147,6 @@ export default function Sidebar() {
             key={item.name}
             href={item.href}
             onClick={() => {
-              // Close sidebar on mobile when navigating
               if (window.innerWidth < 1024) {
                 closeSidebar()
               }
@@ -210,7 +223,7 @@ export default function Sidebar() {
                 </button>
                 {expandedShopReports && (
                   <div className="ml-6">
-                    {shopReports.map((item) => (
+                    {getFilteredShopReports().map((item) => (
                       <Link
                         key={item.name}
                         href={item.href}
@@ -297,7 +310,7 @@ export default function Sidebar() {
                 </button>
                 {expandedGarageReports && (
                   <div className="ml-6">
-                    {garageReports.map((item) => (
+                    {getFilteredGarageReports().map((item) => (
                       <Link
                         key={item.name}
                         href={item.href}
