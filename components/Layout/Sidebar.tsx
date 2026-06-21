@@ -132,7 +132,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-3">
           {/* Small logo icon */}
           <Image
-            src="/TeeposLogo_icon.png"
+            src="/TeevosLogo_icon.png"
             alt="TeePOS"
             width={72}
             height={72}

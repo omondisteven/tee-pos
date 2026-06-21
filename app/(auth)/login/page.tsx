@@ -59,18 +59,18 @@ function LoginForm() {
             <Image
               src="/TeevosLogo_full.png"
               alt="TeePOS Logo"
-              width={220}
-              height={220}
+              width={300}
+              height={300}
               className="rounded-lg"
               priority
             />
           </div>
-          <h2 className="text-3xl font-extrabold text-gray-900">
+          {/* <h2 className="text-3xl font-extrabold text-gray-900">
             TeePOS
           </h2>
           <p className="mt-1 text-sm text-gray-600">
             Stock Management System
-          </p>
+          </p> */}
           <p className="mt-2 text-sm text-gray-600">
             Sign in to your account
           </p>
