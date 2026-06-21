@@ -57,10 +57,10 @@ function LoginForm() {
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <Image
-              src="/TeeposLogo.png"
+              src="/TeeposLogo_full.png"
               alt="TeePOS Logo"
-              width={120}
-              height={120}
+              width={220}
+              height={220}
               className="rounded-lg"
               priority
             />
