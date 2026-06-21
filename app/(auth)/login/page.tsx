@@ -57,7 +57,7 @@ function LoginForm() {
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <Image
-              src="/TeeposLogo_full.png"
+              src="/TeevosLogo_full.png"
               alt="TeePOS Logo"
               width={220}
               height={220}
