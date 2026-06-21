@@ -410,6 +410,38 @@ export default function Sidebar() {
       >
         {sidebarContent}
       </aside>
+      {/* Custom Scrollbar Styles */}
+      <style jsx global>{`
+        /* Sidebar scrollbar styling */
+        .fixed.top-0.left-0.h-full.w-64.bg-gray-800.text-white.flex.flex-col.z-50::-webkit-scrollbar,
+        aside::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .fixed.top-0.left-0.h-full.w-64.bg-gray-800.text-white.flex.flex-col.z-50::-webkit-scrollbar-track,
+        aside::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .fixed.top-0.left-0.h-full.w-64.bg-gray-800.text-white.flex.flex-col.z-50::-webkit-scrollbar-thumb,
+        aside::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 20px;
+          transition: background 0.3s ease;
+        }
+
+        .fixed.top-0.left-0.h-full.w-64.bg-gray-800.text-white.flex.flex-col.z-50::-webkit-scrollbar-thumb:hover,
+        aside::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.4);
+        }
+
+        /* Firefox scrollbar styling */
+        .fixed.top-0.left-0.h-full.w-64.bg-gray-800.text-white.flex.flex-col.z-50,
+        aside {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+      `}</style>
     </>
   )
 }
