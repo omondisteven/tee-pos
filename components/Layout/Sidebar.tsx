@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useSidebar } from '@/context/SidebarContext'
+import Image from 'next/image'
 
 interface User {
   role: string
@@ -128,9 +129,20 @@ export default function Sidebar() {
     <>
       {/* Header with close button - Transparent background */}
       <div className="p-3 border-b border-gray-700/50 flex justify-between items-center bg-gray-800/80 backdrop-blur-sm">
-        <div>
-          <h1 className="text-lg font-bold">TeePOS</h1>
-          <p className="text-[10px] text-gray-400 font-light tracking-wider mt-0.5">Stock Management System</p>
+        <div className="flex items-center gap-3">
+          {/* Small logo icon */}
+          <Image
+            src="/TeeposLogo.png"
+            alt="TeePOS"
+            width={32}
+            height={32}
+            className="rounded-md"
+            priority
+          />
+          <div>
+            <h1 className="text-lg font-bold">TeePOS</h1>
+            <p className="text-[10px] text-gray-400 font-light tracking-wider mt-0.5">Stock Management System</p>
+          </div>
         </div>        
         <button
           onClick={closeSidebar}

@@ -1,9 +1,11 @@
+// app/(auth)/login/page.tsx
 'use client'
 
 import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import toast from 'react-hot-toast'
 
 // Create a separate component that uses useSearchParams
@@ -49,16 +51,31 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            TeePOS Stock Management System
+        {/* Logo and Title */}
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/TeeposLogo.png"
+              alt="TeePOS Logo"
+              width={120}
+              height={120}
+              className="rounded-lg"
+              priority
+            />
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            TeePOS
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-1 text-sm text-gray-600">
+            Stock Management System
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
             Sign in to your account
           </p>
         </div>
+
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
@@ -93,18 +110,22 @@ function LoginForm() {
             </button>
           </div>
         </form>
+
         <div className="text-center text-sm text-gray-600">
           <p>Demo credentials:</p>
           <p>Email: admin@example.com</p>
           <p>Password: admin123</p>
         </div>
+
         <div className="text-center">
           <Link href="/register" className="text-sm text-blue-600 hover:text-blue-500">
             Don't have an account? Register
           </Link>
-        </div>        
+        </div>
       </div>
-      <div className="text-center text-[10px] text-gray-400 mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+
+      {/* Footer inside the component */}
+      <div className="mt-8 text-center text-[10px] text-gray-400">
         <p>© 2026 TEEVOS SOLUTIONS | 254 722 748262</p>
       </div>
     </div>
