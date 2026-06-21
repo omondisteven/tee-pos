@@ -727,7 +727,7 @@ export default function POSPage() {
                         <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.name}</td>
                         <td className="px-4 py-2 text-sm dark:text-gray-300">{item.product.sku}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{item.quantity.toFixed(decimalPlaces)}</td>
-                        <td className="px-4 py-2 text-sm text-center dark:text-gray-300">{item.product.unit || 'PCS'}</td>
+                        <td className="px-4 py-2 text-sm text-center dark:text-gray-300">{item.product.unit || 'GMS'}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">{formatCurrency(item.price)}</td>
                         <td className="px-4 py-2 text-sm text-right dark:text-gray-300">
                           {item.product.vatCategory === 'VATABLE' ? `${vatPercentage}%` : '0%'}

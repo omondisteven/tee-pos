@@ -119,7 +119,7 @@ export default function PurchaseDetailsModal({ isOpen, onClose, purchase }: Purc
                         <td className="px-4 py-2">{item.product?.name || 'Unknown'}</td>
                         <td className="px-4 py-2">{item.product?.sku || 'N/A'}</td>
                         <td className="px-4 py-2 text-right">{item.quantity.toFixed(decimalPlaces)}</td>
-                        <td className="px-4 py-2">{item.product?.unit || 'PCS'}</td>
+                        <td className="px-4 py-2">{item.product?.unit || 'GMS'}</td>
                         <td className="px-4 py-2 text-right">${item.price?.toFixed(2) || '0.00'}</td>
                         <td className="px-4 py-2 text-right">${item.total?.toFixed(2) || '0.00'}</td>
                       </tr>

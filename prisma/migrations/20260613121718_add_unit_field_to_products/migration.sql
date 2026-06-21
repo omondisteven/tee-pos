@@ -43,7 +43,7 @@ CREATE TABLE "Product" (
     "vatCategory" TEXT NOT NULL DEFAULT 'VATABLE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "unit" "UnitOfMeasure" NOT NULL DEFAULT 'PCS',
+    "unit" "UnitOfMeasure" NOT NULL DEFAULT 'GMS',
 
     CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
 );

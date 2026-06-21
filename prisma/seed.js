@@ -1,3 +1,5 @@
+// prisma\seed.js
+// prisma/seed.js
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
 
@@ -17,233 +19,76 @@ async function main() {
     await prisma.sale.deleteMany({})
     await prisma.product.deleteMany({})
     await prisma.user.deleteMany({})
+    await prisma.customer.deleteMany({})
     
     console.log('✅ Database cleaned')
 
     // Create admin user
     console.log('Creating admin user...')
-    const hashedPassword = await bcrypt.hash('admin123', 10)
+    const adminHashedPassword = await bcrypt.hash('admin123', 10)
     
     const adminUser = await prisma.user.create({
       data: {
         email: 'admin@example.com',
-        password: hashedPassword,
+        password: adminHashedPassword,
         name: 'Admin User',
         role: 'ADMIN'
       }
     })
     console.log(`✅ Admin user created: ${adminUser.email} (ID: ${adminUser.id})`)
 
-    // Create sample products with units
-    console.log('Creating sample products...')
-    const products = [
-      { 
-        name: 'Laptop', 
-        sku: 'LAP001', 
-        unit: 'PCS',  // Add unit
-        price: 999.99, 
-        cost: 700.00, 
-        quantity: 10, 
-        lowStockThreshold: 3, 
-        vatCategory: 'VATABLE' 
-      },
-      { 
-        name: 'Mouse', 
-        sku: 'MOU001', 
-        unit: 'PCS',  // Add unit
-        price: 29.99, 
-        cost: 15.00, 
-        quantity: 50, 
-        lowStockThreshold: 10, 
-        vatCategory: 'VATABLE' 
-      },
-      { 
-        name: 'Keyboard', 
-        sku: 'KEY001', 
-        unit: 'PCS',  // Add unit
-        price: 79.99, 
-        cost: 40.00, 
-        quantity: 25, 
-        lowStockThreshold: 5, 
-        vatCategory: 'VATABLE' 
-      },
-      { 
-        name: 'Monitor', 
-        sku: 'MON001', 
-        unit: 'PCS',  // Add unit
-        price: 299.99, 
-        cost: 200.00, 
-        quantity: 8, 
-        lowStockThreshold: 2, 
-        vatCategory: 'VATABLE' 
-      },
-      { 
-        name: 'USB Cable', 
-        sku: 'USB001', 
-        unit: 'PCS',  // Add unit
-        price: 9.99, 
-        cost: 3.00, 
-        quantity: 100, 
-        lowStockThreshold: 20, 
-        vatCategory: 'NON_VATABLE' 
-      },
-      { 
-        name: 'Headphones', 
-        sku: 'HEAD001', 
-        unit: 'PCS',  // Add unit
-        price: 149.99, 
-        cost: 80.00, 
-        quantity: 15, 
-        lowStockThreshold: 5, 
-        vatCategory: 'VATABLE' 
-      },
-      // Add some products with different units
-      { 
-        name: 'Rice', 
-        sku: 'RIC001', 
-        unit: 'KGS',  // Kilograms
-        price: 2.99, 
-        cost: 1.50, 
-        quantity: 100, 
-        lowStockThreshold: 20, 
-        vatCategory: 'NON_VATABLE' 
-      },
-      { 
-        name: 'Cooking Oil', 
-        sku: 'OIL001', 
-        unit: 'LTR',  // Liters
-        price: 5.99, 
-        cost: 3.50, 
-        quantity: 50, 
-        lowStockThreshold: 10, 
-        vatCategory: 'VATABLE' 
-      },
-      { 
-        name: 'Fabric', 
-        sku: 'FAB001', 
-        unit: 'MTR',  // Meters
-        price: 8.99, 
-        cost: 5.00, 
-        quantity: 200, 
-        lowStockThreshold: 30, 
-        vatCategory: 'VATABLE' 
+    // Create regular user
+    console.log('Creating regular user...')
+    const userHashedPassword = await bcrypt.hash('user123', 10)
+    
+    const regularUser = await prisma.user.create({
+      data: {
+        email: 'user@example.com',
+        password: userHashedPassword,
+        name: 'Regular User',
+        role: 'USER'
       }
-    ]
+    })
+    console.log(`✅ Regular user created: ${regularUser.email} (ID: ${regularUser.id})`)
 
-    const createdProducts = []
-    for (const product of products) {
-      const created = await prisma.product.create({
-        data: product
-      })
-      createdProducts.push(created)
-      console.log(`✅ Product created: ${created.name} (SKU: ${created.sku}, Unit: ${created.unit})`)
-    }
-
-    // Create a sample purchase
-    console.log('Creating sample purchase...')
-    const laptop = createdProducts.find(p => p.sku === 'LAP001')
-    const mouse = createdProducts.find(p => p.sku === 'MOU001')
-    
-    if (laptop && mouse) {
-      const purchase = await prisma.purchase.create({
-        data: {
-          invoiceNo: `PO-SAMPLE-${Date.now()}`,
-          supplier: 'Sample Supplier Inc.',
-          total: (laptop.cost * 5) + (mouse.cost * 10),
-          userId: adminUser.id,
-          items: {
-            create: [
-              {
-                productId: laptop.id,
-                quantity: 5,
-                price: laptop.cost,
-                total: laptop.cost * 5
-              },
-              {
-                productId: mouse.id,
-                quantity: 10,
-                price: mouse.cost,
-                total: mouse.cost * 10
-              }
-            ]
-          }
-        }
-      })
-      console.log(`✅ Sample purchase created: ${purchase.invoiceNo}`)
-
-      // Update stock for sample purchase
-      await prisma.product.update({
-        where: { id: laptop.id },
-        data: { quantity: { increment: 5 } }
-      })
-      await prisma.product.update({
-        where: { id: mouse.id },
-        data: { quantity: { increment: 10 } }
-      })
-    }
-
-    // Create a sample sale
-    console.log('Creating sample sale...')
-    const keyboard = createdProducts.find(p => p.sku === 'KEY001')
-    const monitor = createdProducts.find(p => p.sku === 'MON001')
-    
-    if (keyboard && monitor) {
-      const sale = await prisma.sale.create({
-        data: {
-          receiptNo: `SALE-SAMPLE-${Date.now()}`,
-          customerName: 'John Doe',
-          subtotal: keyboard.price + monitor.price,
-          tax: (keyboard.price + monitor.price) * 0.1,
-          total: (keyboard.price + monitor.price) * 1.1,
-          amountPaid: (keyboard.price + monitor.price) * 1.1,
-          paymentMethod: 'CARD',
-          paymentStatus: 'PAID',
-          userId: adminUser.id,
-          items: {
-            create: [
-              {
-                productId: keyboard.id,
-                quantity: 1,
-                price: keyboard.price,
-                total: keyboard.price
-              },
-              {
-                productId: monitor.id,
-                quantity: 1,
-                price: monitor.price,
-                total: monitor.price
-              }
-            ]
-          }
-        }
-      })
-      console.log(`✅ Sample sale created: ${sale.receiptNo}`)
-
-      // Update stock for sample sale
-      await prisma.product.update({
-        where: { id: keyboard.id },
-        data: { quantity: { decrement: 1 } }
-      })
-      await prisma.product.update({
-        where: { id: monitor.id },
-        data: { quantity: { decrement: 1 } }
-      })
-    }
+    // Create a sample customer
+    console.log('Creating sample customer...')
+    const customer = await prisma.customer.create({
+      data: {
+        name: 'John Doe',
+        phone: '+254 700 000 000',
+        email: 'john@example.com',
+        address: 'Nairobi, Kenya'
+      }
+    })
+    console.log(`✅ Customer created: ${customer.name}`)
 
     console.log('\n🎉 Database seeded successfully!')
     console.log('📊 Summary:')
     const userCount = await prisma.user.count()
     const productCount = await prisma.product.count()
+    const customerCount = await prisma.customer.count()
     const purchaseCount = await prisma.purchase.count()
     const saleCount = await prisma.sale.count()
     
     console.log(`   - Users: ${userCount}`)
     console.log(`   - Products: ${productCount}`)
+    console.log(`   - Customers: ${customerCount}`)
     console.log(`   - Purchases: ${purchaseCount}`)
     console.log(`   - Sales: ${saleCount}`)
     console.log('\n🔑 Login credentials:')
+    console.log('   Admin:')
     console.log('   Email: admin@example.com')
     console.log('   Password: admin123')
+    console.log('   Role: ADMIN')
+    console.log('')
+    console.log('   Regular User:')
+    console.log('   Email: user@example.com')
+    console.log('   Password: user123')
+    console.log('   Role: USER')
+    console.log('\n👤 Sample Customer:')
+    console.log(`   Name: ${customer.name}`)
+    console.log(`   Phone: ${customer.phone}`)
     
   } catch (error) {
     console.error('❌ Error during seeding:', error)

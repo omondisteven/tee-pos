@@ -156,7 +156,7 @@ export default function SalesPage() {
             productName: item.product.name,
             productSku: item.product.sku,
             quantity: item.quantity,
-            productUnit: item.product.unit || 'PCS',
+            productUnit: item.product.unit || 'GMS',
             price: item.price,
             total: item.total,
             vatCategory: item.product.vatCategory
@@ -599,7 +599,7 @@ export default function SalesPage() {
                     <tr key={item.id}>
                       <td className="px-4 py-2">{item.product.name}</td>
                       <td className="px-4 py-2 text-right">{item.quantity.toFixed(decimalPlaces)}</td>
-                      <td className="px-4 py-2 text-center">{item.product.unit || 'PCS'}</td>
+                      <td className="px-4 py-2 text-center">{item.product.unit || 'GMS'}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(item.price)}</td>
                       <td className="px-4 py-2 text-right">{formatCurrency(item.total)}</td>
                     </tr>

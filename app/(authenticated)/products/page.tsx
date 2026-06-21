@@ -50,7 +50,7 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
-    unit: 'PCS' as UnitOfMeasure,
+    unit: 'GMS' as UnitOfMeasure,
     price: '',
     cost: '',
     lowStockThreshold: '5',
@@ -140,7 +140,7 @@ export default function ProductsPage() {
         setFormData({ 
           name: '', 
           sku: '', 
-          unit: 'PCS', 
+          unit: 'GMS', 
           price: '', 
           cost: '', 
           lowStockThreshold: '5', 
@@ -247,7 +247,7 @@ export default function ProductsPage() {
             setFormData({ 
               name: '', 
               sku: '', 
-              unit: 'PCS', 
+              unit: 'GMS', 
               price: '', 
               cost: '', 
               lowStockThreshold: '5', 

@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate unit is a valid enum value
-    let validUnit: UnitOfMeasure = UnitOfMeasure.PCS
+    let validUnit: UnitOfMeasure = UnitOfMeasure.GMS // Default to GMS if not provided
     if (unit && Object.values(UnitOfMeasure).includes(unit as UnitOfMeasure)) {
       validUnit = unit as UnitOfMeasure
     }
