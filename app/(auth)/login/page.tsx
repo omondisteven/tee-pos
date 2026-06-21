@@ -122,12 +122,11 @@ function LoginForm() {
             Don't have an account? Register
           </Link>
         </div>
-      </div>
-
-      {/* Footer inside the component */}
-      <div className="mt-8 text-center text-[10px] text-gray-400">
-        <p>© 2026 TEEVOS SOLUTIONS | 254 722 748262</p>
-      </div>
+        {/* Footer inside the component */}
+        <div className="mt-8 text-center text-[10px] text-gray-400">
+          <p>© 2026 TEEVOS SOLUTIONS | 254 722 748262</p>
+        </div>
+      </div>      
     </div>
   )
 }
