@@ -126,8 +126,8 @@ export default function Sidebar() {
 
   const sidebarContent = (
     <>
-      {/* Header with close button */}
-      <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+      {/* Header with close button - Transparent background */}
+      <div className="p-3 border-b border-gray-700/50 flex justify-between items-center bg-gray-800/80 backdrop-blur-sm">
         <div>
           <h1 className="text-lg font-bold">TeePOS</h1>
           <p className="text-[10px] text-gray-400 font-light tracking-wider mt-0.5">Stock Management System</p>
@@ -385,10 +385,41 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-gray-700 text-[10px] text-gray-500 text-center">
+      {/* Footer - Transparent background */}
+      <div className="p-3 border-t border-gray-700/50 text-[10px] text-gray-500 text-center bg-gray-800/80 backdrop-blur-sm">
         <p>v1.0.0</p>
         <p className="mt-0.5">©2026 TEEVOS SOLUTIONS | 254 722 748262</p>
       </div>
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx global>{`
+        /* Modern Scrollbar for Sidebar */
+        .sidebar-scroll::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-track {
+          background: transparent;
+          margin: 8px 0;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 20px;
+          transition: all 0.3s ease;
+        }
+
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
+          box-shadow: 0 0 12px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Firefox */
+        .sidebar-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+        }
+      `}</style>
     </>
   )
 
@@ -404,7 +435,7 @@ export default function Sidebar() {
       
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gray-800 text-white flex flex-col z-50 transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 h-full w-64 bg-gray-800/95 backdrop-blur-sm text-white flex flex-col z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } lg:translate-x-0 lg:static lg:z-auto`}
       >
