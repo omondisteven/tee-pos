@@ -128,7 +128,10 @@ export default function Sidebar() {
     <>
       {/* Header with close button */}
       <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-        <h1 className="text-lg font-bold">Stock Manager</h1>
+        <div>
+          <h1 className="text-lg font-bold">TeePOS</h1>
+          <p className="text-[10px] text-gray-400 font-light tracking-wider mt-0.5">Stock Management System</p>
+        </div>        
         <button
           onClick={closeSidebar}
           className="lg:hidden text-gray-400 hover:text-white focus:outline-none"
@@ -383,8 +386,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-700 text-[10px] text-gray-500 text-center">
-        <p>v1.0.0 | © 2026 TEEVOS SOLUTIONS</p>
-        <p className="mt-0.5">254 722 748262</p>
+        <p>v1.0.0</p>
+        <p className="mt-0.5">©2026 TEEVOS SOLUTIONS | 254 722 748262</p>
       </div>
     </>
   )

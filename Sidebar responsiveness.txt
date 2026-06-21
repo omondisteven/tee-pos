@@ -109,7 +109,7 @@ export default function MobileHeader() {
         </svg>
       </button>
       <div className="flex-1 text-center">
-        <h1 className="text-lg font-semibold text-gray-800 dark:text-white">Stock Manager</h1>
+        <h1 className="text-lg font-semibold text-gray-800 dark:text-white">TeePOS</h1>
       </div>
       <div className="w-8" /> {/* Spacer for alignment */}
     </div>
@@ -230,7 +230,7 @@ export default function Sidebar() {
     <>
       {/* Header with close button */}
       <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-        <h1 className="text-lg font-bold">Stock Manager</h1>
+        <h1 className="text-lg font-bold">TeePOS</h1>
         <button
           onClick={closeSidebar}
           className="lg:hidden text-gray-400 hover:text-white focus:outline-none"
@@ -767,7 +767,7 @@ export default function Sidebar() {
     <>
       {/* Header with close button */}
       <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-        <h1 className="text-lg font-bold">Stock Manager</h1>
+        <h1 className="text-lg font-bold">TeePOS</h1>
         <button
           onClick={closeSidebar}
           className="lg:hidden text-gray-400 hover:text-white focus:outline-none"
@@ -1079,7 +1079,7 @@ export default function MobileHeader() {
         </svg>
       </button>
       <div className="flex-1 text-center">
-        <h1 className="text-lg font-semibold text-gray-800 dark:text-white">Stock Manager</h1>
+        <h1 className="text-lg font-semibold text-gray-800 dark:text-white">TeePOS</h1>
       </div>
       <div className="w-8" /> {/* Spacer for alignment */}
     </div>

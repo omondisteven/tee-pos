@@ -55,7 +55,7 @@ export default function Navbar() {
     <nav className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700">
       <div className="px-4 py-2 flex justify-between items-center">
         <div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">{companyName}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Licensed to: {companyName}</div>
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-gray-800 dark:text-white">
               Welcome back, {userName || 'User'}!
