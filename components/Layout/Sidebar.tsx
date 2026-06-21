@@ -357,7 +357,7 @@ export default function Sidebar() {
           }`}
         >
           <span className="mr-3 text-base">👥</span>
-          Customers
+          Manage Customers
         </Link>
 
         {/* Divider between Customers and Users */}
