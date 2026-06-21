@@ -59,8 +59,8 @@ function LoginForm() {
             <Image
               src="/TeevosLogo_full1.png"
               alt="TeePOS Logo"
-              width={300}
-              height={300}
+              width={400}
+              height={400}
               className="rounded-lg"
               priority
             />
