@@ -80,7 +80,7 @@ export default function ProductsPage() {
     // Use debounce to prevent too many API calls
     const timer = setTimeout(() => {
       fetchProducts()
-    }, 300)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [searchTerm, filterLowStock, pagination.page])
