@@ -1,7 +1,7 @@
 // app/(authenticated)/products/page.tsx
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
 import CompactTable from '@/components/UI/CompactTable'
@@ -65,7 +65,7 @@ export default function ProductsPage() {
     unit: 'GMS' as UnitOfMeasure,
     price: '',
     cost: '',
-    lowStockThreshold: '5',
+    lowStockThreshold: '',
     vatCategory: 'NON_VATABLE',
     description: ''
   })
@@ -77,7 +77,12 @@ export default function ProductsPage() {
 
   // Fetch products when search, filter, or page changes
   useEffect(() => {
-    fetchProducts()
+    // Use debounce to prevent too many API calls
+    const timer = setTimeout(() => {
+      fetchProducts()
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [searchTerm, filterLowStock, pagination.page])
 
   const fetchProducts = async () => {
@@ -124,7 +129,7 @@ export default function ProductsPage() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
-    setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page on search
+    // Don't reset page here - keep current page
   }
 
   const handleLowStockFilter = (checked: boolean) => {
@@ -145,7 +150,7 @@ export default function ProductsPage() {
         unit: formData.unit,
         price: parseFloat(formData.price),
         cost: parseFloat(formData.cost),
-        lowStockThreshold: parseInt(formData.lowStockThreshold),
+        lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold) : 5,
         vatCategory: formData.vatCategory,
         description: formData.description
       }
@@ -174,7 +179,7 @@ export default function ProductsPage() {
           unit: 'GMS', 
           price: '', 
           cost: '', 
-          lowStockThreshold: '5', 
+          lowStockThreshold: '', 
           vatCategory: 'NON_VATABLE', 
           description: '' 
         })
@@ -403,7 +408,7 @@ export default function ProductsPage() {
               unit: 'GMS', 
               price: '', 
               cost: '', 
-              lowStockThreshold: '5', 
+              lowStockThreshold: '', 
               vatCategory: 'NON_VATABLE', 
               description: '' 
             })
@@ -425,8 +430,12 @@ export default function ProductsPage() {
               placeholder="Search by name or SKU..."
               value={searchTerm}
               onChange={handleSearch}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+              autoFocus={false}
             />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {searchTerm && `Showing results for "${searchTerm}"`}
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Filter</label>
@@ -449,9 +458,8 @@ export default function ProductsPage() {
         {renderPagination()}
       </div>
 
-      {/* Modal - keep the same */}
+      {/* Modal */}
       {showModal && (
-        // ... existing modal code (unchanged)
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
             <h3 className="text-lg font-medium mb-4 dark:text-white">{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
@@ -462,7 +470,7 @@ export default function ProductsPage() {
                   placeholder="Name *"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 <input
@@ -470,7 +478,7 @@ export default function ProductsPage() {
                   placeholder="SKU *"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 
@@ -506,7 +514,7 @@ export default function ProductsPage() {
                   placeholder="Price *"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 <input
@@ -515,22 +523,22 @@ export default function ProductsPage() {
                   placeholder="Cost *"
                   value={formData.cost}
                   onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 <input
                   type="number"
-                  placeholder="Low Stock Threshold"
+                  placeholder="Low Stock Threshold (Default: 5)"
                   value={formData.lowStockThreshold}
                   onChange={(e) => setFormData({ ...formData, lowStockThreshold: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">VAT Category</label>
                   <select
                     value={formData.vatCategory}
                     onChange={(e) => setFormData({ ...formData, vatCategory: e.target.value })}
-                    className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                    className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="VATABLE">Vatable</option>
                     <option value="NON_VATABLE">Non-Vatable</option>
@@ -540,7 +548,7 @@ export default function ProductsPage() {
                   placeholder="Description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
                 {!editingProduct && (
