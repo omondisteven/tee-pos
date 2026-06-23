@@ -22,6 +22,13 @@ interface Product {
   description?: string
 }
 
+interface PaginationData {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
 // Unit display names for better readability
 const unitDisplayNames: Record<UnitOfMeasure, string> = {
   PCS: 'Pieces',
@@ -41,12 +48,17 @@ const unitDisplayNames: Record<UnitOfMeasure, string> = {
 export default function ProductsPage() {
   const { formatCurrency, refreshSettings } = useCurrency()
   const [products, setProducts] = useState<Product[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterLowStock, setFilterLowStock] = useState(false)
+  const [pagination, setPagination] = useState<PaginationData>({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0
+  })
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -63,18 +75,41 @@ export default function ProductsPage() {
     refreshSettings()
   }, [])
 
+  // Fetch products when search, filter, or page changes
   useEffect(() => {
-    filterProducts()
-  }, [searchTerm, filterLowStock, products])
+    fetchProducts()
+  }, [searchTerm, filterLowStock, pagination.page])
 
   const fetchProducts = async () => {
     try {
+      setLoading(true)
       const token = localStorage.getItem('token')
-      const res = await fetch('/api/products', {
+      
+      // Build query parameters
+      const params = new URLSearchParams()
+      params.append('page', pagination.page.toString())
+      params.append('limit', pagination.limit.toString())
+      
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+      
+      if (filterLowStock) {
+        params.append('lowStock', 'true')
+      }
+      
+      const res = await fetch(`/api/products?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
+      
       setProducts(data.products || [])
+      setPagination(data.pagination || {
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 0
+      })
     } catch (error) {
       toast.error('Failed to fetch products')
     } finally {
@@ -82,23 +117,19 @@ export default function ProductsPage() {
     }
   }
 
-  const filterProducts = () => {
-    let filtered = [...products]
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > pagination.totalPages) return
+    setPagination(prev => ({ ...prev, page: newPage }))
+  }
 
-    if (searchTerm) {
-      filtered = filtered.filter(product =>
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+    setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page on search
+  }
 
-    if (filterLowStock) {
-      filtered = filtered.filter(product => 
-        product.quantity <= product.lowStockThreshold
-      )
-    }
-
-    setFilteredProducts(filtered)
+  const handleLowStockFilter = (checked: boolean) => {
+    setFilterLowStock(checked)
+    setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page on filter
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -237,6 +268,128 @@ export default function ProductsPage() {
     )}
   ]
 
+  // Pagination component
+  const renderPagination = () => {
+    const { page, totalPages } = pagination
+    if (totalPages <= 1) return null
+
+    const pages = []
+    const maxVisible = 5
+    let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1)
+    
+    if (endPage - startPage + 1 < maxVisible) {
+      startPage = Math.max(1, endPage - maxVisible + 1)
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i)
+    }
+
+    return (
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-6">
+        <div className="flex-1 flex justify-between sm:hidden">
+          <button
+            onClick={() => handlePageChange(page - 1)}
+            disabled={page === 1}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => handlePageChange(page + 1)}
+            disabled={page === totalPages}
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
+        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Showing <span className="font-medium">{((page - 1) * pagination.limit) + 1}</span> to{' '}
+              <span className="font-medium">
+                {Math.min(page * pagination.limit, pagination.total)}
+              </span>{' '}
+              of <span className="font-medium">{pagination.total}</span> results
+            </p>
+          </div>
+          <div>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+              <button
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Previous</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+              
+              {startPage > 1 && (
+                <>
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    1
+                  </button>
+                  {startPage > 2 && (
+                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      ...
+                    </span>
+                  )}
+                </>
+              )}
+              
+              {pages.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => handlePageChange(p)}
+                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                    p === page
+                      ? 'z-10 bg-blue-50 dark:bg-blue-900 border-blue-500 dark:border-blue-500 text-blue-600 dark:text-blue-200'
+                      : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              
+              {endPage < totalPages && (
+                <>
+                  {endPage < totalPages - 1 && (
+                    <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      ...
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handlePageChange(totalPages)}
+                    className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  >
+                    {totalPages}
+                  </button>
+                </>
+              )}
+              
+              <button
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === totalPages}
+                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className="sr-only">Next</span>
+                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -271,7 +424,7 @@ export default function ProductsPage() {
               type="text"
               placeholder="Search by name or SKU..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearch}
               className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -281,7 +434,7 @@ export default function ProductsPage() {
               <input
                 type="checkbox"
                 checked={filterLowStock}
-                onChange={(e) => setFilterLowStock(e.target.checked)}
+                onChange={(e) => handleLowStockFilter(e.target.checked)}
                 className="mr-2"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Show Low Stock Items Only</span>
@@ -291,10 +444,14 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table */}
-      <CompactTable columns={productColumns} data={filteredProducts} />
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <CompactTable columns={productColumns} data={products} />
+        {renderPagination()}
+      </div>
 
-      {/* Modal */}
+      {/* Modal - keep the same */}
       {showModal && (
+        // ... existing modal code (unchanged)
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
           <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
             <h3 className="text-lg font-medium mb-4 dark:text-white">{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
