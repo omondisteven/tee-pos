@@ -57,6 +57,7 @@ enum UnitOfMeasure {
   SET   // Set
   ROLL  // Roll
   PKT   // Packet
+  CAN  // Cans
 }
 
 model Product {
