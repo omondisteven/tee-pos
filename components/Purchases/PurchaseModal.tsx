@@ -8,7 +8,7 @@ interface Product {
   id: string
   name: string
   sku: string
-  unit: string  // Add this
+  unit: string
   price: number
   cost: number
   quantity: number
@@ -19,7 +19,7 @@ interface PurchaseItem {
   productId: string
   productName: string
   productSku: string
-  productUnit: string  // Add this
+  productUnit: string
   quantity: number
   cost: number
   total: number
@@ -43,6 +43,8 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const decimalPlaces = 2;
+  // Track raw input values for quantity to avoid cursor jumping
+  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({})
 
   useEffect(() => {
     if (isOpen) {
@@ -100,6 +102,12 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
         total: item.total
       }))
       setItems(purchaseItems)
+      // Initialize quantity inputs
+      const inputs: Record<number, string> = {}
+      purchaseItems.forEach((item: PurchaseItem, index: number) => {
+        inputs[index] = item.quantity.toString()
+      })
+      setQuantityInputs(inputs)
     }
   }
 
@@ -131,13 +139,15 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       productSku: selectedProduct.sku,
-      productUnit: selectedProduct.unit, 
+      productUnit: selectedProduct.unit,
       quantity: 1,
       cost: selectedProduct.cost,
       total: selectedProduct.cost
     }
 
+    const newIndex = items.length
     setItems([...items, newItem])
+    setQuantityInputs(prev => ({ ...prev, [newIndex]: '1' }))
     setSelectedProduct(null)
     setSearchTerm('')
     setShowDropdown(false)
@@ -155,10 +165,52 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
     setItems(updatedItems)
   }
 
+  const handleQuantityChange = (index: number, value: string) => {
+    // Update the raw input value
+    setQuantityInputs(prev => ({ ...prev, [index]: value }))
+    
+    // Only parse and update if it's a valid number
+    if (value === '' || value === '.') {
+      return
+    }
+    
+    const numValue = parseFloat(value)
+    if (!isNaN(numValue)) {
+      updateItem(index, 'quantity', numValue)
+    }
+  }
+
+  const handleQuantityBlur = (index: number) => {
+    const value = quantityInputs[index]
+    if (!value || value === '' || value === '.') {
+      // Reset to current quantity
+      const currentQuantity = items[index]?.quantity || 1
+      setQuantityInputs(prev => ({ ...prev, [index]: currentQuantity.toString() }))
+      return
+    }
+    
+    const numValue = parseFloat(value)
+    if (isNaN(numValue) || numValue <= 0) {
+      // Reset to current quantity
+      const currentQuantity = items[index]?.quantity || 1
+      setQuantityInputs(prev => ({ ...prev, [index]: currentQuantity.toString() }))
+      return
+    }
+    
+    // Round to decimal places and update
+    const rounded = Number(numValue.toFixed(decimalPlaces))
+    updateItem(index, 'quantity', rounded)
+    setQuantityInputs(prev => ({ ...prev, [index]: rounded.toString() }))
+  }
+
   const removeItem = (index: number) => {
     if (confirm('Remove this item?')) {
       const removedItem = items[index]
       setItems(items.filter((_, i) => i !== index))
+      // Clean up quantity inputs
+      const newInputs = { ...quantityInputs }
+      delete newInputs[index]
+      setQuantityInputs(newInputs)
       toast.success(`${removedItem.productName} removed from purchase`)
     }
   }
@@ -251,6 +303,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
     generateInvoiceNumber()
     setSupplier('')
     setItems([])
+    setQuantityInputs({})
     setSelectedProduct(null)
     setSearchTerm('')
     setShowDropdown(false)
@@ -374,6 +427,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Price</th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
@@ -383,7 +437,7 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
               <tbody className="bg-white divide-y divide-gray-200">
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                       No items added. Search and select a product from the dropdown above.
                     </td>
                   </tr>
@@ -396,58 +450,21 @@ export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurch
                       {/* SKU */}
                       <td className="px-4 py-2">{item.productSku}</td>
                       
+                      {/* Unit */}
+                      <td className="px-4 py-2 text-center">{item.productUnit}</td>
+                      
                       {/* Quantity with unit display */}
                       <td className="px-4 py-2">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
                             inputMode="decimal"
-                            value={item.quantity.toFixed(decimalPlaces)}
-                            onChange={(e) => {
-                              let value = e.target.value
-                              
-                              // Allow empty string
-                              if (value === '') {
-                                return
-                              }
-                              
-                              // Allow decimal point alone (user might be typing "0.")
-                              if (value === '.') {
-                                return
-                              }
-                              
-                              // Allow numbers and single decimal point
-                              if (!/^\d*\.?\d*$/.test(value)) {
-                                return
-                              }
-                              
-                              // Parse the value
-                              const numValue = parseFloat(value)
-                              
-                              // Only update if it's a valid number
-                              if (!isNaN(numValue)) {
-                                updateItem(index, 'quantity', numValue)
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const value = e.target.value
-                              if (value === '' || value === '.') {
-                                updateItem(index, 'quantity', 0)
-                              } else {
-                                const numValue = parseFloat(value)
-                                if (!isNaN(numValue) && numValue > 0) {
-                                  // Round to decimal places
-                                  const rounded = Number(numValue.toFixed(decimalPlaces))
-                                  updateItem(index, 'quantity', rounded)
-                                } else if (numValue <= 0) {
-                                  updateItem(index, 'quantity', 0)
-                                }
-                              }
-                            }}
+                            value={quantityInputs[index] !== undefined ? quantityInputs[index] : item.quantity.toString()}
+                            onChange={(e) => handleQuantityChange(index, e.target.value)}
+                            onBlur={() => handleQuantityBlur(index)}
                             className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
                             disabled={loading}
                           />
-                          <span className="text-xs text-gray-500">{item.productUnit}</span>
                         </div>
                       </td>
                       

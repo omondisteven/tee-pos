@@ -1,523 +1,372 @@
-// components/Purchases/PurchaseModal.tsx
+//app\(authenticated)\purchases\page.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
 import toast from 'react-hot-toast'
+import { useCurrency } from '@/context/CurrencyContext'
+import PurchaseModal from '@/components/Purchases/PurchaseModal'
+import PurchaseDetailsModal from '@/components/Purchases/PurchaseDetailsModal'
 
-interface Product {
+interface Purchase {
   id: string
-  name: string
-  sku: string
-  unit: string
-  price: number
-  cost: number
-  quantity: number
-}
-
-interface PurchaseItem {
-  id?: string
-  productId: string
-  productName: string
-  productSku: string
-  productUnit: string
-  quantity: number
-  cost: number
+  invoiceNo: string 
+  supplier: string | null
   total: number
+  status: string
+  cancelReason?: string
+  createdAt: string
+  user: { name: string; email?: string }
+  items: Array<{
+    id: string
+    quantity: number
+    price: number
+    total: number
+    product: { name: string; sku: string; unit: string } 
+  }>
 }
 
-interface PurchaseModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  editingPurchase?: any
-}
-
-export default function PurchaseModal({ isOpen, onClose, onSuccess, editingPurchase }: PurchaseModalProps) {
-  const [products, setProducts] = useState<Product[]>([])
-  const [invoiceNo, setInvoiceNo] = useState('')
-  const [supplier, setSupplier] = useState('')
-  const [items, setItems] = useState<PurchaseItem[]>([])
-  const [loading, setLoading] = useState(false)
+export default function PurchasesPage() {
+  const { formatCurrency } = useCurrency()
+  const [purchases, setPurchases] = useState<Purchase[]>([])
+  const [filteredPurchases, setFilteredPurchases] = useState<Purchase[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
-  const decimalPlaces = 2;
-  // Track raw input values for quantity
-  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({})
+  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [showCancelModal, setShowCancelModal] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancellingPurchaseId, setCancellingPurchaseId] = useState<string | null>(null)
+  const printRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (isOpen) {
-      fetchProducts()
-      if (editingPurchase) {
-        loadPurchaseForEdit()
-      } else {
-        generateInvoiceNumber()
-      }
-    }
-  }, [isOpen])
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    fetchPurchases()
   }, [])
 
-  const fetchProducts = async () => {
+  useEffect(() => {
+    filterPurchases()
+  }, [searchTerm, statusFilter, startDate, endDate, purchases])
+
+  const fetchPurchases = async () => {
     try {
       const token = localStorage.getItem('token')
-      const res = await fetch('/api/products?limit=1000', {
+      const res = await fetch('/api/purchases', {
         headers: { Authorization: `Bearer ${token}` }
       })
       const data = await res.json()
-      setProducts(data.products || [])
+      setPurchases(data.purchases || [])
     } catch (error) {
-      toast.error('Failed to load products')
-    }
-  }
-
-  const generateInvoiceNumber = () => {
-    const timestamp = new Date().getTime()
-    const random = Math.floor(Math.random() * 1000)
-    setInvoiceNo(`PO-${timestamp}-${random}`)
-  }
-
-  const loadPurchaseForEdit = () => {
-    if (editingPurchase) {
-      setInvoiceNo(editingPurchase.invoiceNo)
-      setSupplier(editingPurchase.supplier || '')
-      const purchaseItems = editingPurchase.items.map((item: any) => ({
-        productId: item.productId,
-        productName: item.product.name,
-        productSku: item.product.sku,
-        quantity: item.quantity,
-        productUnit: item.product.unit,
-        cost: item.price,
-        total: item.total
-      }))
-      setItems(purchaseItems)
-      // Initialize quantity inputs
-      const inputs: Record<number, string> = {}
-      purchaseItems.forEach((item: PurchaseItem, index: number) => {
-        inputs[index] = item.quantity.toString()
-      })
-      setQuantityInputs(inputs)
-    }
-  }
-
-  // Filter products based on search term (name or SKU)
-  const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const handleProductSelect = (product: Product) => {
-    setSelectedProduct(product)
-    setSearchTerm(`${product.name} (${product.sku})`)
-    setShowDropdown(false)
-  }
-
-  const addItem = () => {
-    if (!selectedProduct) {
-      toast.error('Please select a product from the dropdown')
-      return
-    }
-
-    const existingItem = items.find(item => item.productId === selectedProduct.id)
-    if (existingItem) {
-      toast.error('Product already added. Edit quantity instead.')
-      return
-    }
-
-    const newItem: PurchaseItem = {
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      productSku: selectedProduct.sku,
-      productUnit: selectedProduct.unit,
-      quantity: 1,
-      cost: selectedProduct.cost,
-      total: selectedProduct.cost
-    }
-
-    const newIndex = items.length
-    setItems([...items, newItem])
-    setQuantityInputs(prev => ({ ...prev, [newIndex]: '1' }))
-    setSelectedProduct(null)
-    setSearchTerm('')
-    setShowDropdown(false)
-    toast.success(`${selectedProduct.name} added to purchase`)
-  }
-
-  const updateItem = (index: number, field: string, value: any) => {
-    const updatedItems = [...items]
-    updatedItems[index] = { ...updatedItems[index], [field]: value }
-    
-    if (field === 'quantity' || field === 'cost') {
-      updatedItems[index].total = updatedItems[index].quantity * updatedItems[index].cost
-    }
-    
-    setItems(updatedItems)
-  }
-
-  const handleQuantityChange = (index: number, value: string) => {
-    // Update the raw input value
-    setQuantityInputs(prev => ({ ...prev, [index]: value }))
-    
-    // Parse and update if valid
-    if (value === '' || value === '.') {
-      return
-    }
-    
-    const numValue = parseFloat(value)
-    if (!isNaN(numValue) && numValue > 0) {
-      updateItem(index, 'quantity', numValue)
-    }
-  }
-
-  const handleQuantityBlur = (index: number) => {
-    const value = quantityInputs[index]
-    if (!value || value === '' || value === '.') {
-      // Reset to current quantity
-      const currentQuantity = items[index]?.quantity || 1
-      setQuantityInputs(prev => ({ ...prev, [index]: currentQuantity.toString() }))
-      return
-    }
-    
-    const numValue = parseFloat(value)
-    if (isNaN(numValue) || numValue <= 0) {
-      // Reset to current quantity
-      const currentQuantity = items[index]?.quantity || 1
-      setQuantityInputs(prev => ({ ...prev, [index]: currentQuantity.toString() }))
-      return
-    }
-    
-    // Round to decimal places and update
-    const rounded = Number(numValue.toFixed(decimalPlaces))
-    updateItem(index, 'quantity', rounded)
-    setQuantityInputs(prev => ({ ...prev, [index]: rounded.toString() }))
-  }
-
-  const removeItem = (index: number) => {
-    if (confirm('Remove this item?')) {
-      const removedItem = items[index]
-      setItems(items.filter((_, i) => i !== index))
-      // Clean up quantity inputs
-      const newInputs = { ...quantityInputs }
-      delete newInputs[index]
-      setQuantityInputs(newInputs)
-      toast.success(`${removedItem.productName} removed from purchase`)
-    }
-  }
-
-  const calculateGrandTotal = () => {
-    return items.reduce((sum, item) => sum + item.total, 0)
-  }
-
-  const validateItems = () => {
-    for (const item of items) {
-      if (item.quantity <= 0) {
-        toast.error(`${item.productName} has invalid quantity`)
-        return false
-      }
-      if (item.cost <= 0) {
-        toast.error(`${item.productName} has invalid cost price`)
-        return false
-      }
-    }
-    return true
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (items.length === 0) {
-      toast.error('Please add at least one item')
-      return
-    }
-
-    if (!invoiceNo) {
-      toast.error('Invoice number is required')
-      return
-    }
-
-    if (!validateItems()) {
-      return
-    }
-
-    setLoading(true)
-    const toastId = toast.loading(editingPurchase ? 'Updating purchase...' : 'Creating purchase...')
-    
-    try {
-      const token = localStorage.getItem('token')
-      const purchaseData = {
-        invoiceNo,
-        supplier: supplier || null,
-        items: items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          cost: item.cost
-        })),
-        total: calculateGrandTotal()
-      }
-
-      console.log('Sending purchase data:', purchaseData)
-
-      const url = editingPurchase ? `/api/purchases/${editingPurchase.id}` : '/api/purchases'
-      const method = editingPurchase ? 'PUT' : 'POST'
-
-      const res = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(purchaseData)
-      })
-
-      const responseData = await res.json()
-      console.log('Server response:', responseData)
-
-      if (res.ok) {
-        toast.success(editingPurchase ? 'Purchase updated successfully!' : 'Purchase created successfully!', { id: toastId })
-        onSuccess()
-        onClose()
-        resetForm()
-      } else {
-        toast.error(responseData.error || 'Operation failed', { id: toastId })
-      }
-    } catch (error) {
-      console.error('Submit error:', error)
-      toast.error('An error occurred. Check console for details.', { id: toastId })
+      toast.error('Failed to fetch purchases')
     } finally {
       setLoading(false)
     }
   }
 
-  const resetForm = () => {
-    generateInvoiceNumber()
-    setSupplier('')
-    setItems([])
-    setQuantityInputs({})
-    setSelectedProduct(null)
-    setSearchTerm('')
-    setShowDropdown(false)
+  const filterPurchases = () => {
+    let filtered = [...purchases]
+
+    if (searchTerm) {
+      filtered = filtered.filter(purchase =>
+        purchase.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (statusFilter !== 'ALL') {
+      filtered = filtered.filter(purchase => purchase.status === statusFilter)
+    }
+
+    if (startDate && endDate) {
+      filtered = filtered.filter(purchase => {
+        const purchaseDate = new Date(purchase.createdAt)
+        const start = new Date(startDate)
+        const end = new Date(endDate)
+        end.setHours(23, 59, 59)
+        return purchaseDate >= start && purchaseDate <= end
+      })
+    }
+
+    setFilteredPurchases(filtered)
   }
 
-  if (!isOpen) return null
+  const totalAmount = filteredPurchases.reduce((sum, purchase) => sum + purchase.total, 0)
+
+  const handlePrint = () => {
+    const printContent = printRef.current
+    if (printContent) {
+      const originalContents = document.body.innerHTML
+      document.body.innerHTML = printContent.innerHTML
+      window.print()
+      document.body.innerHTML = originalContents
+      window.location.reload()
+    }
+  }
+
+  const handleCancelPurchase = async () => {
+    if (!cancelReason.trim()) {
+      toast.error('Please provide a reason for cancellation')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`/api/purchases/${cancellingPurchaseId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'CANCEL',
+          cancelReason
+        })
+      })
+
+      if (res.ok) {
+        toast.success('Purchase cancelled successfully')
+        setShowCancelModal(false)
+        setCancelReason('')
+        setCancellingPurchaseId(null)
+        fetchPurchases()
+      } else {
+        const error = await res.json()
+        toast.error(error.error || 'Failed to cancel purchase')
+      }
+    } catch (error) {
+      toast.error('An error occurred')
+    }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-full">Loading...</div>
+  }
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-10 mx-auto p-5 border w-full max-w-6xl shadow-lg rounded-md bg-white">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">
-            {editingPurchase ? 'Edit Purchase' : 'Create New Purchase'}
-          </h3>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold dark:text-white">Purchases</h1>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Create Purchase
+        </button>
+      </div>
+
+      {/* Search and Filter Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search by Invoice #</label>
+            <input
+              type="text"
+              placeholder="Invoice number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Summary and Print */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Total Purchases (Filtered)</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{formatCurrency(totalAmount)}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{filteredPurchases.length} transactions</p>
+          </div>
           <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-2xl"
+            onClick={handlePrint}
+            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
           >
-            ×
+            Print Report
           </button>
         </div>
-
-        <form onSubmit={handleSubmit}>
-          {/* Header Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Invoice/Reference Number *
-              </label>
-              <input
-                type="text"
-                value={invoiceNo}
-                onChange={(e) => setInvoiceNo(e.target.value)}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Supplier
-              </label>
-              <input
-                type="text"
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Supplier name"
-                disabled={loading}
-              />
-            </div>
-          </div>
-
-          {/* Add Product Section */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Add Products to Purchase
-            </label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative" ref={dropdownRef}>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value)
-                    setShowDropdown(true)
-                    setSelectedProduct(null)
-                  }}
-                  onClick={() => setShowDropdown(true)}
-                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Click to search products by Name or SKU..."
-                  disabled={loading}
-                />
-                
-                {/* Dropdown - shows all products when clicked, filters as you type */}
-                {showDropdown && (
-                  <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-80 overflow-y-auto">
-                    {filteredProducts.length > 0 ? (
-                      filteredProducts.map((product) => (
-                        <div
-                          key={product.id}
-                          onClick={() => handleProductSelect(product)}
-                          className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors"
-                        >
-                          <div className="font-medium text-gray-900">{product.name}</div>
-                          <div className="text-sm text-gray-500">
-                            SKU: {product.sku} | Cost: ${product.cost.toFixed(2)} | Stock: {product.quantity.toFixed(decimalPlaces)}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="px-3 py-4 text-center text-gray-500">
-                        {searchTerm ? 'No products found matching your search' : 'No products available'}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={addItem}
-                  disabled={!selectedProduct || loading}
-                  className="w-full bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Add Item
-                </button>
-              </div>
-              {selectedProduct && (
-                <div className="flex items-center text-sm text-green-600">
-                  ✓ Ready to add: {selectedProduct.name}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Items Table */}
-          <div className="overflow-x-auto mb-4">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Price</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {items.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
-                      No items added. Search and select a product from the dropdown above.
-                    </td>
-                  </tr>
-                ) : (
-                  items.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50">
-                      <td className="px-4 py-2">{item.productName}</td>
-                      <td className="px-4 py-2">{item.productSku}</td>
-                      <td className="px-4 py-2">{item.productUnit}</td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={quantityInputs[index] !== undefined ? quantityInputs[index] : item.quantity.toString()}
-                          onChange={(e) => handleQuantityChange(index, e.target.value)}
-                          onBlur={() => handleQuantityBlur(index)}
-                          className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
-                          disabled={loading}
-                        />
-                      </td>
-                      <td className="px-4 py-2">
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={item.cost}
-                          onChange={(e) => updateItem(index, 'cost', parseFloat(e.target.value) || 0)}
-                          className="w-24 px-2 py-1 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
-                          disabled={loading}
-                        />
-                      </td>
-                      <td className="px-4 py-2 font-medium text-right">${item.total.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeItem(index)}
-                          className="text-red-600 hover:text-red-800 font-medium"
-                          disabled={loading}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Summary */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-600">Total Items: {items.length}</p>
-              </div>
-              <div>
-                <p className="text-xl font-bold text-gray-900">Grand Total: ${calculateGrandTotal().toFixed(2)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Buttons */}
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 disabled:opacity-50"
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading || items.length === 0}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-            >
-              {loading ? (editingPurchase ? 'Updating...' : 'Saving...') : (editingPurchase ? 'Update Purchase' : 'Save Purchase')}
-            </button>
-          </div>
-        </form>
       </div>
+
+      {/* Printable Report */}
+      <div ref={printRef} className="hidden">
+        <div className="p-8">
+          <h1 className="text-2xl font-bold text-center mb-4">Purchase Report</h1>
+          <p className="text-center text-gray-600 mb-6">
+            Generated on {new Date().toLocaleString()}
+          </p>
+          {startDate && endDate && (
+            <p className="text-center text-sm text-gray-500 mb-4">
+              Period: {new Date(startDate).toLocaleDateString()} - {new Date(endDate).toLocaleDateString()}
+            </p>
+          )}
+          <table className="min-w-full divide-y divide-gray-200 mb-4">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-2 text-left">Invoice #</th>
+                <th className="px-4 py-2 text-left">Supplier</th>
+                <th className="px-4 py-2 text-right">Total</th>
+                <th className="px-4 py-2 text-left">Date</th>
+                <th className="px-4 py-2 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPurchases.map((purchase) => (
+                <tr key={purchase.id}>
+                  <td className="px-4 py-2">{purchase.invoiceNo}</td>
+                  <td className="px-4 py-2">{purchase.supplier || 'N/A'}</td>
+                  <td className="px-4 py-2 text-right">{formatCurrency(purchase.total)}</td>
+                  <td className="px-4 py-2">{new Date(purchase.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-2">{purchase.status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="text-right font-bold text-lg">
+            Total: {formatCurrency(totalAmount)}
+          </div>
+        </div>
+      </div>
+
+      {/* Purchases Table */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Invoice #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supplier</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Purchased By</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Items</th>
+                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredPurchases.map((purchase) => (
+                <tr key={purchase.id} className={purchase.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.invoiceNo}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.supplier || 'N/A'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(purchase.total)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{new Date(purchase.createdAt).toLocaleDateString()}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.user?.name || 'Unknown'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      purchase.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                    }`}>
+                      {purchase.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600 dark:text-gray-400">
+                    {purchase.items?.length || 0}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
+                    <button
+                      onClick={() => setSelectedPurchase(purchase)}
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                    >
+                      View
+                    </button>
+                    {purchase.status === 'ACTIVE' && (
+                      <button
+                        onClick={() => {
+                          setCancellingPurchaseId(purchase.id)
+                          setShowCancelModal(true)
+                        }}
+                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <PurchaseModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={fetchPurchases}
+      />
+
+      <PurchaseDetailsModal
+        isOpen={!!selectedPurchase}
+        onClose={() => setSelectedPurchase(null)}
+        purchase={selectedPurchase}
+      />
+
+      {/* Cancel Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
+            <h3 className="text-lg font-medium mb-4 dark:text-white">Cancel Purchase</h3>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Reason for Cancellation *</label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-red-500"
+                rows={3}
+                placeholder="Please provide a reason for cancelling this purchase..."
+                required
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false)
+                  setCancelReason('')
+                  setCancellingPurchaseId(null)
+                }}
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded hover:bg-gray-400 dark:hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCancelPurchase}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
