@@ -220,7 +220,7 @@ export default function ProductsPage() {
 
   const productColumns = [
     { key: 'name', header: 'Name', align: 'left' as const },
-    { key: 'sku', header: 'SKU', align: 'left' as const },
+    { key: 'sku', header: 'ITEM CODE', align: 'left' as const },
     { 
       key: 'unit', 
       header: 'Unit', 
@@ -427,7 +427,7 @@ export default function ProductsPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Products</label>
             <input
               type="text"
-              placeholder="Search by name or SKU..."
+              placeholder="Search by name or Item Code..."
               value={searchTerm}
               onChange={handleSearch}
               className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
@@ -475,10 +475,10 @@ export default function ProductsPage() {
                 />
                 <input
                   type="text"
-                  placeholder="SKU *"
+                  placeholder="Item Code *"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-500 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 
