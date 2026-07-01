@@ -478,7 +478,7 @@ export default function ProductsPage() {
                   placeholder="Item Code *"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-300 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 
