@@ -1,4 +1,5 @@
 //app\(authenticated)\purchases\page.tsx
+// app/(authenticated)/purchases/page.tsx
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
@@ -143,19 +144,22 @@ export default function PurchasesPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Purchases</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Purchases</h1>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
         >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
           Create Purchase
         </button>
       </div>
 
       {/* Search and Filter Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search by Invoice #</label>
@@ -164,7 +168,7 @@ export default function PurchasesPage() {
               placeholder="Invoice number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
           <div>
@@ -172,7 +176,7 @@ export default function PurchasesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             >
               <option value="ALL">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -185,7 +189,7 @@ export default function PurchasesPage() {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
           <div>
@@ -194,14 +198,14 @@ export default function PurchasesPage() {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
         </div>
       </div>
 
       {/* Summary and Print */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm text-gray-600 dark:text-gray-400">Total Purchases (Filtered)</p>
@@ -210,8 +214,11 @@ export default function PurchasesPage() {
           </div>
           <button
             onClick={handlePrint}
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
             Print Report
           </button>
         </div>
@@ -258,43 +265,68 @@ export default function PurchasesPage() {
       </div>
 
       {/* Purchases Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+            <thead className="bg-gray-800 dark:bg-gray-900">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Invoice #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Supplier</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Total</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Purchased By</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Items</th>
-                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Actions</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-white uppercase tracking-wider">Invoice #</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-white uppercase tracking-wider">Supplier</th>
+                <th className="px-6 py-3.5 text-right text-xs font-semibold text-white uppercase tracking-wider">Total</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-white uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3.5 text-left text-xs font-semibold text-white uppercase tracking-wider">Purchased By</th>
+                <th className="px-6 py-3.5 text-center text-xs font-semibold text-white uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3.5 text-center text-xs font-semibold text-white uppercase tracking-wider">Items</th>
+                <th className="px-6 py-3.5 text-center text-xs font-semibold text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredPurchases.map((purchase) => (
-                <tr key={purchase.id} className={purchase.status === 'CANCELLED' ? 'bg-red-50 dark:bg-red-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{purchase.invoiceNo}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.supplier || 'N/A'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">{formatCurrency(purchase.total)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{new Date(purchase.createdAt).toLocaleDateString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">{purchase.user?.name || 'Unknown'}</td>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredPurchases.map((purchase, index) => (
+                <tr 
+                  key={purchase.id} 
+                  className={`
+                    ${purchase.status === 'CANCELLED' 
+                      ? 'bg-red-50 dark:bg-red-900/20' 
+                      : index % 2 === 0 
+                        ? 'bg-white dark:bg-gray-800' 
+                        : 'bg-gray-50 dark:bg-gray-800/70'
+                    }
+                    hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors duration-150
+                  `}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    {purchase.invoiceNo}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                    {purchase.supplier || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900 dark:text-white">
+                    {formatCurrency(purchase.total)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                    {new Date(purchase.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+                    {purchase.user?.name || 'Unknown'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      purchase.status === 'ACTIVE' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                      purchase.status === 'ACTIVE' 
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-800' 
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-800'
                     }`}>
                       {purchase.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-600 dark:text-gray-400">
-                    {purchase.items?.length || 0}
+                    <span className="inline-flex items-center justify-center bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {purchase.items?.length || 0}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-center text-sm">
                     <button
                       onClick={() => setSelectedPurchase(purchase)}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium mr-3 transition-colors"
                     >
                       View
                     </button>
@@ -304,7 +336,7 @@ export default function PurchasesPage() {
                           setCancellingPurchaseId(purchase.id)
                           setShowCancelModal(true)
                         }}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
                       >
                         Cancel
                       </button>

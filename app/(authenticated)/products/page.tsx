@@ -1,7 +1,8 @@
 // app/(authenticated)/products/page.tsx
+// app/(authenticated)/products/page.tsx
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import toast from 'react-hot-toast'
 import { useCurrency } from '@/context/CurrencyContext'
 import CompactTable from '@/components/UI/CompactTable'
@@ -77,7 +78,6 @@ export default function ProductsPage() {
 
   // Fetch products when search, filter, or page changes
   useEffect(() => {
-    // Use debounce to prevent too many API calls
     const timer = setTimeout(() => {
       fetchProducts()
     }, 1000)
@@ -90,7 +90,6 @@ export default function ProductsPage() {
       setLoading(true)
       const token = localStorage.getItem('token')
       
-      // Build query parameters
       const params = new URLSearchParams()
       params.append('page', pagination.page.toString())
       params.append('limit', pagination.limit.toString())
@@ -129,12 +128,11 @@ export default function ProductsPage() {
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
-    // Don't reset page here - keep current page
   }
 
   const handleLowStockFilter = (checked: boolean) => {
     setFilterLowStock(checked)
-    setPagination(prev => ({ ...prev, page: 1 })) // Reset to first page on filter
+    setPagination(prev => ({ ...prev, page: 1 }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,7 +153,6 @@ export default function ProductsPage() {
         description: formData.description
       }
 
-      // Only include quantity for new products
       if (!editingProduct) {
         Object.assign(submitData, { quantity: 0 })
       }
@@ -396,9 +393,9 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold dark:text-white">Products</h1>
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Products</h1>
         <button
           onClick={() => {
             setEditingProduct(null)
@@ -414,14 +411,17 @@ export default function ProductsPage() {
             })
             setShowModal(true)
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center gap-2"
         >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
           Add Product
         </button>
       </div>
 
       {/* Search and Filter Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Products</label>
@@ -430,8 +430,7 @@ export default function ProductsPage() {
               placeholder="Search by name or Item Code..."
               value={searchTerm}
               onChange={handleSearch}
-              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-              autoFocus={false}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {searchTerm && `Showing results for "${searchTerm}"`}
@@ -444,7 +443,7 @@ export default function ProductsPage() {
                 type="checkbox"
                 checked={filterLowStock}
                 onChange={(e) => handleLowStockFilter(e.target.checked)}
-                className="mr-2"
+                className="mr-2 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">Show Low Stock Items Only</span>
             </label>
@@ -453,7 +452,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Products Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
         <CompactTable columns={productColumns} data={products} />
         {renderPagination()}
       </div>
@@ -478,7 +477,7 @@ export default function ProductsPage() {
                   placeholder="Item Code *"
                   value={formData.sku}
                   onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-300 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 
