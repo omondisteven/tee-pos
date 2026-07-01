@@ -1,3 +1,5 @@
+// context\CurrencyContext.tsx
+// context/CurrencyContext.tsx
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
@@ -34,18 +36,40 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   const fetchSettings = async () => {
     try {
       const token = localStorage.getItem('token')
+      if (!token) {
+        // If no token, use defaults
+        setCurrency('KES')
+        setCurrencySymbol('KSh')
+        setVatPercentage(16)
+        setDecimalPlaces(2)
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/settings', {
         headers: { Authorization: `Bearer ${token}` }
       })
+      
       if (res.ok) {
         const data = await res.json()
         setCurrency(data.currency || 'KES')
         setCurrencySymbol(data.currencySymbol || 'KSh')
         setVatPercentage(data.vatPercentage || 16)
         setDecimalPlaces(data.decimalPlaces || 2)
+      } else {
+        // Use defaults if API fails
+        setCurrency('KES')
+        setCurrencySymbol('KSh')
+        setVatPercentage(16)
+        setDecimalPlaces(2)
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error)
+      // Use defaults on error
+      setCurrency('KES')
+      setCurrencySymbol('KSh')
+      setVatPercentage(16)
+      setDecimalPlaces(2)
     } finally {
       setLoading(false)
     }
@@ -68,14 +92,11 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
   // Format input value to ensure correct decimal places
   const formatInputValue = (value: string): string => {
     if (!value) return ''
-    // Remove any non-digit characters except decimal point
     let cleanValue = value.replace(/[^\d.-]/g, '')
     const parts = cleanValue.split('.')
     if (parts.length === 1) {
-      // No decimal point, add .00
       return `${parts[0]}.${'0'.repeat(decimalPlaces)}`
     } else if (parts.length === 2) {
-      // Has decimal point, pad or truncate to decimalPlaces
       const decimalPart = parts[1].padEnd(decimalPlaces, '0').slice(0, decimalPlaces)
       return `${parts[0]}.${decimalPart}`
     }

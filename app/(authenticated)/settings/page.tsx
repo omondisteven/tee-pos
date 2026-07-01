@@ -1,3 +1,4 @@
+// app/(authenticated)/settings/page.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -27,7 +28,7 @@ const defaultSettings = {
   currency: 'KES',
   currencySymbol: 'KSh',
   vatPercentage: 16,
-  decimalPlaces: 2,  // Add this
+  decimalPlaces: 2,
   lowStockAlert: true,
   autoBackup: false,
   dateFormat: 'DD/MM/YYYY',
@@ -38,7 +39,6 @@ const defaultSettings = {
   companyPhone: '+254 700 000 000',
   companyAddress: 'Nairobi, Kenya'
 }
-
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -85,7 +85,12 @@ export default function SettingsPage() {
         toast.success('Settings saved successfully')
         // Apply theme immediately
         applyTheme(settings.theme)
-        await refreshCurrencySettings() // Refresh currency context
+        
+        // IMPORTANT: Refresh the currency context to reflect changes
+        await refreshCurrencySettings()
+        
+        // Also refresh the page data to show updated currency
+        window.location.reload()
       } else {
         toast.error('Failed to save settings')
       }
@@ -118,6 +123,45 @@ export default function SettingsPage() {
         <div className="text-xl text-red-500">Failed to load settings</div>
       </div>
     )
+  }
+
+  // Currency change handler with symbol mapping
+  const handleCurrencyChange = (currencyCode: string) => {
+    const currencySymbols: { [key: string]: string } = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      JPY: '¥',
+      CNY: '¥',
+      INR: '₹',
+      AUD: 'A$',
+      CAD: 'C$',
+      CHF: 'Fr',
+      NZD: 'NZ$',
+      // African Currencies
+      KES: 'KSh',
+      NGN: '₦',
+      ZAR: 'R',
+      GHS: '₵',
+      TZS: 'TSh',
+      UGX: 'USh',
+      RWF: 'FRw',
+      XAF: 'FCFA',
+      XOF: 'CFA',
+      MAD: 'DH',
+      EGP: 'E£',
+      ETB: 'Br',
+      MUR: '₨',
+      BWP: 'P',
+      ZMW: 'ZK',
+      MZN: 'MT',
+      GNF: 'FG'
+    }
+    setSettings({ 
+      ...settings, 
+      currency: currencyCode,
+      currencySymbol: currencySymbols[currencyCode] || '$'
+    })
   }
 
   return (
@@ -212,57 +256,20 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Currency</label>
-                {/* Update the currency select options to include African currencies */}
                 <select
-                value={settings.currency}
-                onChange={(e) => {
-                    const currencySymbols: { [key: string]: string } = {
-                    USD: '$',
-                    EUR: '€',
-                    GBP: '£',
-                    JPY: '¥',
-                    CNY: '¥',
-                    INR: '₹',
-                    AUD: 'A$',
-                    CAD: 'C$',
-                    CHF: 'Fr',
-                    NZD: 'NZ$',
-                    // African Currencies
-                    KES: 'KSh',
-                    NGN: '₦',
-                    ZAR: 'R',
-                    GHS: '₵',
-                    TZS: 'TSh',
-                    UGX: 'USh',
-                    RWF: 'FRw',
-                    XAF: 'FCFA',
-                    XOF: 'CFA',
-                    MAD: 'DH',
-                    EGP: 'E£',
-                    ETB: 'Br',
-                    MUR: '₨',
-                    BWP: 'P',
-                    ZMW: 'ZK',
-                    MZN: 'MT',
-                    GNF: 'FG'
-                    }
-                    setSettings({ 
-                    ...settings, 
-                    currency: e.target.value,
-                    currencySymbol: currencySymbols[e.target.value] || '$'
-                    })
-                }}
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={settings.currency}
+                  onChange={(e) => handleCurrencyChange(e.target.value)}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                <optgroup label="Major Currencies">
+                  <optgroup label="Major Currencies">
                     <option value="USD">US Dollar ($)</option>
                     <option value="EUR">Euro (€)</option>
                     <option value="GBP">British Pound (£)</option>
                     <option value="JPY">Japanese Yen (¥)</option>
                     <option value="CNY">Chinese Yuan (¥)</option>
                     <option value="INR">Indian Rupee (₹)</option>
-                </optgroup>
-                <optgroup label="African Currencies">
+                  </optgroup>
+                  <optgroup label="African Currencies">
                     <option value="KES">Kenyan Shilling (KSh)</option>
                     <option value="NGN">Nigerian Naira (₦)</option>
                     <option value="ZAR">South African Rand (R)</option>
@@ -280,13 +287,13 @@ export default function SettingsPage() {
                     <option value="ZMW">Zambian Kwacha (ZK)</option>
                     <option value="MZN">Mozambican Metical (MT)</option>
                     <option value="GNF">Guinean Franc (FG)</option>
-                </optgroup>
-                <optgroup label="Other Currencies">
+                  </optgroup>
+                  <optgroup label="Other Currencies">
                     <option value="AUD">Australian Dollar (A$)</option>
                     <option value="CAD">Canadian Dollar (C$)</option>
                     <option value="CHF">Swiss Franc (Fr)</option>
                     <option value="NZD">New Zealand Dollar (NZ$)</option>
-                </optgroup>
+                  </optgroup>
                 </select>
               </div>
               <div>
@@ -312,23 +319,22 @@ export default function SettingsPage() {
                 <p className="text-xs text-gray-500 mt-1">Default VAT rate for taxable items</p>
               </div>
 
-                    {/* Decimal places settings */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Decimal Places for Amounts
-                    </label>
-                    <select
-                        value={settings.decimalPlaces}
-                        onChange={(e) => setSettings({ ...settings, decimalPlaces: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                        <option value="0">0 decimal places (e.g., 1,234)</option>
-                        <option value="1">1 decimal place (e.g., 1,234.5)</option>
-                        <option value="2">2 decimal places (e.g., 1,234.56)</option>
-                        <option value="3">3 decimal places (e.g., 1,234.567)</option>
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">Number of decimal places shown for all currency amounts</p>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Decimal Places for Amounts
+                </label>
+                <select
+                  value={settings.decimalPlaces}
+                  onChange={(e) => setSettings({ ...settings, decimalPlaces: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="0">0 decimal places (e.g., 1,234)</option>
+                  <option value="1">1 decimal place (e.g., 1,234.5)</option>
+                  <option value="2">2 decimal places (e.g., 1,234.56)</option>
+                  <option value="3">3 decimal places (e.g., 1,234.567)</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Number of decimal places shown for all currency amounts</p>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Date Format</label>
                 <select
